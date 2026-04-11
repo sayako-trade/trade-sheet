@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>過去トレ記録シート</title>
+<style>
+:root{
+  --blue:#1565C0;--blue-lt:#E3F2FD;--blue-md:#90CAF9;
+  --red:#C62828;--red-lt:#FFEBEE;--red-md:#EF9A9A;
+  --orange:#E65100;--orange-lt:#FFF3E0;
+  --green:#2E7D32;--green-lt:#E8F5E9;
+  --purple:#6A1B9A;--purple-lt:#F3E5F5;
+  --warn:#F57F17;--warn-lt:#FFF8E1;
+  --gray:#546E7A;--gray-lt:#ECEFF1;
+  --border:#CFD8DC;
+  --bg:#F0F4F8;--card:#FFF;--text:#1A2332;--sub:#607D8B;--muted:#B0BEC5;
+  --shadow:0 1px 4px rgba(0,0,0,.10);
+  --font:'Meiryo','Hiragino Sans','Yu Gothic UI',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:12px}
+.app{max-width:1600px;margin:0 auto;padding:10px 12px}
+.card{background:var(--card);border-radius:8px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden}
+.ch{padding:8px 14px;font-weight:700;font-size:12.5px;background:#F5F7FA;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cb{padding:10px 14px}
+.ctrl-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 14px}
+.ctrl{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.ctrl label{font-weight:700;font-size:12px;color:var(--sub)}
+input[type=number],input[type=text]{font-family:var(--font);font-size:12px;border:1.5px solid var(--border);border-radius:5px;padding:4px 7px;background:#fff;color:var(--text);transition:border-color .15s}
+input[type=number]:focus,input[type=text]:focus{outline:none;border-color:var(--blue)}
+textarea{font-family:var(--font);font-size:11px;border:1.5px solid var(--border);border-radius:5px;padding:6px;resize:vertical;color:var(--text)}
+textarea:focus{outline:none;border-color:var(--blue)}
+.btn{font-family:var(--font);font-size:12px;padding:5px 13px;border:none;border-radius:5px;cursor:pointer;font-weight:700;transition:filter .1s,transform .08s}
+.btn:not(:disabled):hover{filter:brightness(1.08)}
+.btn:not(:disabled):active{transform:scale(.97)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn-green{background:var(--green);color:#fff}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-outline{background:#fff;border:1.5px solid var(--border);color:var(--sub)}
+.btn-outline:hover{background:var(--gray-lt)}
+.btn-sm{padding:3px 9px;font-size:11px}
+.btn-xs{padding:1px 6px;font-size:10.5px;border-radius:4px}
+
+/* レイアウト：大画面は横並び、iPad以下は縦積み */
+.layout{display:flex;gap:10px;align-items:flex-start;min-width:0;flex-wrap:wrap}
+.left-panel{flex:1 1 600px;min-width:0;overflow-x:auto}
+.right-panel{flex:1 1 340px;min-width:280px;position:sticky;top:10px;max-height:calc(100vh - 20px);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;align-self:flex-start}
+.memo-sticky{position:static}
+.memo-sticky.no-sticky{position:static}
+
+/* iPadでは横スクロール可能なテーブルラップ */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* TABLE */
+.table-wrap{overflow-x:auto}
+table.trade{border-collapse:collapse;font-size:11px}
+table.trade th,table.trade td{border:1px solid var(--border);padding:3px 6px;text-align:center;vertical-align:middle;white-space:nowrap}
+table.trade th{background:#F5F7FA;font-weight:700;color:var(--sub);font-size:11px}
+table.trade tr:hover td{background:#FAFCFF}
+table.trade tr.row-ryodate td{background:#F3E5F5!important}
+table.trade tr.row-ryodate:hover td{background:#EDE7F6!important}
+/* 日区切りの強い下線 */
+table.trade tr.day-end td{border-bottom:2px solid #90A4AE!important}
+.cd{width:52px}.csl{width:26px;text-align:center!important;padding:2px 3px!important}
+.cp{width:72px}.cdf{width:52px}.cob{width:34px}.cos{width:34px}
+.cs{width:220px;text-align:left!important}.cpr{width:74px}
+
+/* スロット価格入力 */
+.slot-p-inp{width:68px;font-size:11px!important;padding:2px 4px!important;border:1px solid var(--border);border-radius:3px;background:#FFF9F0;color:var(--text)}
+.slot-p-inp:focus{outline:none;border-color:var(--orange)}
+
+/* ORDER BTN */
+.ord-btn{width:26px;height:24px;border:1.5px solid var(--border);border-radius:4px;cursor:pointer;font-size:14px;font-weight:900;background:#FAFAFA;display:inline-flex;align-items:center;justify-content:center;transition:all .12s}
+.ob{background:var(--blue-lt)!important;border-color:var(--blue)!important;color:var(--blue)!important}
+.os{background:var(--red-lt)!important;border-color:var(--red)!important;color:var(--red)!important}
+
+/* PRICE */
+.ph{color:transparent;background:#E8EDF2;border-radius:3px;padding:0 4px;user-select:none}
+.up{color:var(--red);font-weight:700}
+.dn{color:var(--blue);font-weight:700}
+
+/* SETTLE */
+.sl{font-size:10.5px}
+.si{display:flex;align-items:center;gap:4px;padding:2px 0;border-bottom:1px solid #F0F4F8;flex-wrap:wrap}
+.si:last-child{border-bottom:none}
+.si.auto-si{background:var(--warn-lt);border-radius:4px;padding:2px 4px;margin:1px 0;border:1px solid #FFE082}
+.tb{color:var(--blue);font-weight:900}
+.ts{color:var(--red);font-weight:900}
+.brm{background:none;border:none;cursor:pointer;color:var(--muted);font-size:10px;padding:0 2px;transition:color .1s}
+.brm:hover{color:var(--red)}
+.auto-tag{font-size:9px;background:var(--warn-lt);color:var(--warn);border:1px solid #FFE082;border-radius:3px;padding:0 3px;font-weight:700}
+.expiry-warn{font-size:9px;color:var(--red);font-weight:700;background:var(--red-lt);border-radius:3px;padding:1px 4px;display:inline-block;margin-left:2px}
+.ryodate-tag{font-size:9px;background:var(--purple-lt);color:var(--purple);border-radius:3px;padding:0 3px;border:1px solid #CE93D8;font-weight:700}
+
+/* SETTLE FORM */
+.sf{background:var(--orange-lt);border:1.5px solid #FFCC80;border-radius:6px;padding:7px 9px;margin-top:4px;font-size:10.5px}
+.sf .pl{border:1px solid var(--border);border-radius:4px;max-height:150px;overflow-y:auto;margin-bottom:6px;background:#fff}
+.pi2{padding:3px 10px;cursor:pointer;display:flex;gap:7px;align-items:center;flex-wrap:nowrap;white-space:nowrap;border-bottom:1px solid #F5F7FA;transition:background .1s}
+.pi2:last-child{border-bottom:none}
+.pi2:hover{background:#F5F7FA}
+.pi2.sel{background:var(--blue-lt)}
+.pi2.expiring{background:#FFF8E1}
+.sf .row2{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.sf .row2 input{width:90px}
+.sf .btns{display:flex;gap:6px}
+.ppos{color:var(--red);font-weight:700}
+.pneg{color:var(--blue);font-weight:700}
+
+/* MEMO GRID — 24グループ対応 4列×6行 */
+.memo-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 14px;background:#F5F7FA;border-bottom:1px solid var(--border)}
+.memo-title{font-size:13px;font-weight:700}
+.memo-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.memo-meta input{width:78px}
+.g-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 12px}
+.gc{border:2px solid var(--border);border-radius:7px;overflow:hidden;font-size:10px;transition:border-color .2s,box-shadow .2s}
+.gc.cur{border-color:var(--orange)!important;box-shadow:0 0 0 3px #FF980033}
+.gc.done{border-color:#A5D6A7}
+.gh{background:#F5F7FA;padding:3px 7px;font-weight:700;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);font-size:11px}
+.gc.cur .gh{background:var(--orange-lt)}
+.gc.done .gh{background:var(--green-lt);color:var(--green)}
+.gc-cols{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border)}
+.gch{text-align:center;padding:2px 3px;font-weight:700;font-size:10px}
+.gch.buy{color:var(--blue);border-right:1px solid var(--border)}
+.gch.sell{color:var(--red)}
+.ge-row{display:grid;grid-template-columns:1fr 1fr}
+.ge{min-height:20px;padding:2px 5px;border-bottom:1px solid #F0F4F8;display:flex;flex-direction:column;justify-content:center}
+.ge:last-child{border-bottom:none}
+.ge.stl{text-decoration:line-through;color:var(--muted)!important;background:#FAFCFF}
+.ge.stl .gep,.ge.stl .ged{color:var(--muted)!important}
+.ge.stl .ge-fukumi{color:inherit!important;text-decoration:line-through}
+.ge.auto-stl{background:#FFF8E1!important}
+.ged{font-size:9px;color:var(--sub)}
+.gep{font-weight:700;font-size:10px}
+.ge.buy-e .gep{color:var(--blue)}
+.ge.sell-e .gep{color:var(--red)}
+.ge-exp{font-size:8px;color:var(--warn);font-weight:700}
+.ge-fukumi{font-size:9px;font-weight:700;line-height:1.2}
+.gcol:first-child{border-right:1px solid #E8EDF2}
+
+/* BOTTOM */
+.total-bar{display:flex;gap:20px;align-items:center;flex-wrap:wrap;padding:11px 18px}
+.tc{display:flex;align-items:center;gap:8px}
+.tc label{font-weight:700;white-space:nowrap;font-size:12px}
+.tc input{width:115px;text-align:right}
+.tbig{font-size:16px;font-weight:700}
+.op{font-size:20px;font-weight:700;color:var(--muted)}
+
+/* IMPORT */
+.imp-paste-area{width:100%;height:110px;font-size:11px;font-family:'Courier New',monospace}
+.imp-hint{font-size:10px;color:var(--sub);margin-bottom:6px;line-height:1.6}
+.imp-stat{font-size:11px;padding:8px 12px;border-radius:5px;margin-top:8px;font-weight:700;overflow:visible}
+.imp-stat.ok{background:var(--green-lt);color:var(--green)}
+.imp-stat.err{background:var(--red-lt);color:var(--red)}
+.imp-stat.warn{background:var(--warn-lt);color:var(--warn)}
+.imp-preview{max-height:160px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:4px;margin-top:8px;font-size:10px;background:#fff;font-weight:400}
+.imp-prow{display:flex;gap:8px;padding:4px 8px;border-bottom:1px solid #F5F7FA;flex-wrap:wrap}
+.imp-prow:last-child{border-bottom:none}
+.imp-prow:nth-child(even){background:#FAFBFC}
+.mono{font-family:'Courier New',monospace}
+.badge{display:inline-block;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700}
+.badge-orange{background:var(--orange-lt);color:var(--orange)}
+.badge-green{background:var(--green-lt);color:var(--green)}
+.tag-note{font-size:10px;color:var(--sub);background:var(--gray-lt);border-radius:4px;padding:1px 6px}
+
+/* EXPIRE BANNER */
+.expire-banner{background:var(--warn-lt);border:2px solid #FFB300;border-radius:8px;padding:9px 14px;margin-bottom:10px;font-size:12px;font-weight:700;color:var(--warn);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.expire-banner .items{font-weight:400;font-size:11px;color:var(--text)}
+
+/* FIXED REVEAL BUTTON */
+.fixed-reveal{position:fixed;bottom:22px;right:22px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.fixed-reveal .btn{box-shadow:0 3px 10px rgba(0,0,0,.22);font-size:13px;padding:9px 18px}
+.fixed-reveal .rev-info{font-size:10px;background:rgba(0,0,0,.55);color:#fff;border-radius:5px;padding:2px 8px;white-space:nowrap}
+
+/* KOSAI FIXED */
+.kf-section{padding:8px 14px;border-bottom:1px solid var(--border)}
+.kf-title{font-size:11px;font-weight:700;color:var(--sub);margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.kf-row{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:11px;flex-wrap:wrap}
+.kf-badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.kf-rieki{background:var(--green-lt);color:var(--green);border:1px solid #A5D6A7}
+.kf-son{background:var(--red-lt);color:var(--red);border:1px solid var(--red-md)}
+.kf-doji{background:var(--gray-lt);color:var(--gray);border:1px solid var(--border)}
+.kf-amount{font-size:13px;font-weight:700}
+.kf-desc{font-size:10px;color:var(--sub);line-height:1.5}
+.progress-bar{height:10px;background:#E8EDF2;border-radius:5px;overflow:hidden;margin:4px 0}
+.progress-fill{height:100%;border-radius:5px;transition:width .3s}
+
+/* SOSAI */
+.sosai-wrap{display:flex;flex-wrap:wrap;gap:8px;padding:8px 14px}
+.sosai-group{flex:1;min-width:160px;max-width:100%}
+.sosai-group-title{font-size:11px;font-weight:700;color:var(--sub);background:#F5F7FA;padding:3px 8px;border-radius:5px;margin-bottom:4px;border-left:3px solid var(--blue);cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
+.sosai-group-title:hover{background:#EEF2F6}
+.sosai-body{max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;background:#fff}
+.sosai-row{display:flex;align-items:center;gap:5px;padding:2px 5px;border-bottom:1px solid #F0F4F8;font-size:10.5px;flex-wrap:nowrap}
+.sosai-row:last-child{border-bottom:none}
+.sosai-row:hover{background:#FAFCFF}
+.sosai-lbl{font-weight:700;color:var(--sub);min-width:30px;font-size:10px;flex-shrink:0}
+.sosai-pos{display:flex;align-items:center;gap:2px;flex:1;flex-wrap:wrap;font-size:10px}
+.sosai-res{font-size:11px;font-weight:700;text-align:right;min-width:72px;white-space:nowrap;flex-shrink:0}
+.sosai-ok{color:var(--green)}
+.sosai-ng{color:var(--red)}
+.sosai-fix{font-size:9px;margin-left:2px;font-weight:400}
+.sosai-achieved{font-size:9px;color:var(--green);background:var(--green-lt);border-radius:3px;padding:1px 3px;margin-left:2px}
+
+/* SAVED LIST */
+.saved-tag{background:#F5F7FA;border:1px solid var(--border);border-radius:4px;padding:1px 7px;cursor:pointer;font-size:10px;color:var(--sub)}
+.saved-tag.cur{background:var(--blue-lt);border-color:var(--blue);color:var(--blue);font-weight:700}
+.saved-tag:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ═══ フェーズ1/2 追加スタイル ═══ */
+/* ライブダッシュボード */
+.live-bar{background:linear-gradient(135deg,#1A2332 0%,#263548 100%);color:#E8EDF2;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.25);margin-bottom:10px;overflow:hidden}
+.live-bar-inner{display:flex;flex-wrap:wrap;align-items:stretch;gap:0}
+.live-cell{padding:10px 16px;border-right:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:130px}
+.live-cell:last-child{border-right:none}
+.live-label{font-size:9px;color:#78909C;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.live-val{font-size:20px;font-weight:900;line-height:1.1;white-space:nowrap}
+.live-val.pos{color:#69F0AE}
+.live-val.neg{color:#FF5252}
+.live-val.neu{color:#E8EDF2}
+.live-val.warn{color:#FFD740}
+.live-price-inp{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);border-radius:6px;color:#fff;font-size:20px;font-weight:900;width:120px;padding:2px 8px;font-family:var(--font);text-align:right}
+.live-price-inp:focus{outline:none;border-color:#69F0AE;background:rgba(105,240,174,.08)}
+.live-price-inp::placeholder{color:#546E7A;font-size:13px}
+/* 目標バー */
+.target-bar-wrap{flex:1 1 200px;padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:180px}
+.target-bar-bg{height:8px;background:rgba(255,255,255,.12);border-radius:4px;overflow:hidden}
+.target-bar-fill{height:8px;border-radius:4px;transition:width .4s}
+/* 損切りアラート */
+.loss-alert{background:#B71C1C;animation:pulse .8s infinite alternate}
+@keyframes pulse{from{opacity:1}to{opacity:.7}}
+/* 次の指値パネル */
+.next-price-panel{background:#FFF8E1;border:1.5px solid #FFD740;border-radius:7px;padding:8px 12px;margin-top:6px}
+.next-price-row{display:flex;align-items:center;gap:8px;font-size:11px;padding:2px 0}
+.np-lbl{font-weight:700;min-width:60px;font-size:10px;color:var(--sub)}
+.np-price{font-weight:900;font-size:13px}
+.np-buy{color:var(--blue)}
+.np-sell{color:var(--red)}
+.np-diff{font-size:10px;color:var(--sub);background:#F5F7FA;border-radius:3px;padding:0 5px}
+/* クイック価格ボタン */
+.qp-btns{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+.qp-btn{font-size:10px;padding:2px 7px;border:1.5px solid var(--border);border-radius:4px;cursor:pointer;background:#FFF;color:var(--text);font-family:var(--font);font-weight:700;transition:all .1s}
+.qp-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-lt)}
+.qp-btn.qp-buy{border-color:var(--blue-md);color:var(--blue);background:var(--blue-lt)}
+.qp-btn.qp-sell{border-color:var(--red-md);color:var(--red);background:var(--red-lt)}
+/* 時刻バッジ */
+.time-badge{font-size:9px;color:var(--muted);background:#F5F7FA;border-radius:3px;padding:0 4px;font-family:'Courier New',monospace}
+/* 損切り警告 */
+.sl-warning{background:#FFF3E0;border:1.5px solid #FF9800;border-radius:5px;padding:4px 8px;font-size:10px;color:var(--orange);font-weight:700;margin-top:4px;display:flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+/* ═══════════════════════ 定数 ═══════════════════════ */
+/* ①-⑫: U+2460-U+246B  ⑬-⑳: U+246C-U+2473  ㉑-㉔: U+3251-U+3254 */
+const NUMS=['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫',
+            '⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳','㉑','㉒','㉓','㉔'];
+const SLOT_LABELS=['①','②','③終'];
+const N_GROUPS=24;
+
+/* ═══════════════════════ STATE ═══════════════════════ */
+/*
+ * ordersキー: `${YYYY-MM-DD}_${slot}` (slot=0,1,2)
+ * settlesキー: 同上
+ * prices[dstr]     = 終値 (③)
+ * openPrices[dstr] = 始値 (①)  ← CSVから自動取得
+ * ② = Math.round((始値 + 終値) / 2) 自動計算
+ * slotPrices: CSVに始値がない場合の手動上書き {`${dstr}_0`: number, `${dstr}_1`: number}
+ */
+const S={
+  year:2025,month:1,stock:'',code:'',capital:'',shares:'',
+  prices:{},openPrices:{},revealed:0,
+  orders:{},
+  settles:{},
+  groups:mkGroups(),
+  carries:Array.from({length:N_GROUPS},()=>[]),
+  gi:0,idc:1,prOpen:false,
+  sfDs:null,selPos:null,exitInp:'',
+  fixedOpen:false,jisaOpen:false,
+  rule3On:true,rule3Pct:3,
+  prevP:'',memo:'',fukumi:'',
+  slotPrices:{},
+  groupMemos:Array.from({length:N_GROUPS},()=>''),
+  impStat:null,pasteText:'',
+  memoSticky:true,
+  memoBelow:false,    // false=右横並び / true=トレード表の下に全幅表示
+  /* ── フェーズ1/2 追加フィールド ── */
+  liveP:'',            // ライブ現在値（手動入力）
+  dailyTarget:'',      // 今日の目標利益（円）
+  maxDailyLoss:'',     // 今日の最大損失ライン（円・マイナスで入力）
+  lossLockPct:3,       // 損切りライン（建値から何%）
+  dashOpen:true,       // ライブダッシュ開閉
+  nextPOpen:true       // 次の指値パネル開閉
+};
+
+function mkGroups(){return Array.from({length:N_GROUPS},()=>({buys:[],sells:[]}))}
+
+/* ═══════════════════════ HELPERS ═══════════════════════ */
+function wds(y,m){
+  const r=[],d=new Date(y,m-1,1);
+  while(d.getMonth()===m-1){if(d.getDay()&&d.getDay()!==6)r.push(new Date(d));d.setDate(d.getDate()+1)}
+  return r;
+}
+function ds(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+function pad(n){return String(n).padStart(2,'0')}
+function fd(s){if(!s)return '';const[,m,d]=s.split('-');return `${+m}/${+d}`}
+function fn(n){if(n===''||n==null)return '';const v=Number(n);return isNaN(v)?'':v.toLocaleString('ja-JP')}
+function addM6(dstr){const d=new Date(dstr);d.setMonth(d.getMonth()+6);return ds(d)}
+function isExp(entryDstr,checkDstr){return checkDstr>=addM6(entryDstr)}
+
+/* スロットキーから dstr と slot を取り出す
+   dstr は "YYYY-MM-DD" で "-" を含むが "_" は含まない */
+function parseSlotKey(slotKey){
+  const i=slotKey.lastIndexOf('_');
+  return {dstr:slotKey.substring(0,i), slot:parseInt(slotKey.substring(i+1))};
+}
+
+/* スロット価格取得
+ * slot=0 → 始値 (S.openPrices[dstr] → S.slotPrices手動 → 終値フォールバック)
+ * slot=1 → 中値 = round((始値+終値)/2) → 手動 → 終値フォールバック
+ * slot=2 → 終値 S.prices[dstr] 固定
+ */
+function getSlotPrice(dstr,slot){
+  const closeP=S.prices[dstr]||null;
+  const openP=S.openPrices[dstr]||null;
+  if(slot===2) return closeP;
+  if(slot===1){
+    // ② 中値 = (始値+終値)/2
+    if(openP&&closeP) return Math.round((openP+closeP)/2);
+    const v=S.slotPrices[`${dstr}_1`]; if(v>0) return v;
+    return closeP;
+  }
+  // slot===0: 始値
+  if(openP) return openP;
+  const v=S.slotPrices[`${dstr}_0`]; if(v>0) return v;
+  return closeP;
+}
+
+/* 始値データがあるかどうか */
+function hasOpenPrice(){for(const _ in S.openPrices)return true;return false;}
+
+function hasAnyPrice(){for(const _ in S.prices)return true;return false;}
+
+/* ═══════════════════════ キャッシュ ═══════════════════════ */
+let C={};
+
+function buildCache(){
+  C.days=wds(S.year,S.month);
+  C.lastD=S.revealed>0?ds(C.days[S.revealed-1]):null;
+  C.sh=Math.max(Number(S.shares)||1,1);
+  // ライブ現在値が入力されていればそちらを優先
+  const livePNum=parseFloat(S.liveP)||null;
+  C.liveP=livePNum;
+  C.curP=livePNum||(C.lastD?(S.prices[C.lastD]||null):null);
+  C.revDstrs=new Set(C.days.slice(0,S.revealed).map(d=>ds(d)));
+  C.entryMap=new Map();
+  for(const g of S.groups){
+    for(const e of g.buys)C.entryMap.set(e.id,e);
+    for(const e of g.sells)C.entryMap.set(e.id,e);
+  }
+  C.open=[];
+  S.groups.forEach((g,gi)=>{
+    for(const e of g.buys)if(!e.settled)C.open.push({...e,gi});
+    for(const e of g.sells)if(!e.settled)C.open.push({...e,gi});
+  });
+  C.autoStlIds=new Set();
+  C.settleExitMap=new Map();
+  C.settleGiMap=new Map();
+  for(const ss of Object.values(S.settles)){
+    for(const s of ss){
+      if(s.auto)C.autoStlIds.add(s.posId);
+      if(!C.settleExitMap.has(s.posId))C.settleExitMap.set(s.posId,s.exitPrice);
+      if(!C.settleGiMap.has(s.posId))C.settleGiMap.set(s.posId,s.settledGi!=null?s.settledGi:-1);
+    }
+  }
+}
+
+function entryById(id){
+  if(C.entryMap)return C.entryMap.get(id)??null;
+  for(const g of S.groups){
+    for(const e of g.buys)if(e.id===id)return e;
+    for(const e of g.sells)if(e.id===id)return e;
+  }
+  return null;
+}
+function openEgi(){return C.open??S.groups.flatMap((g,gi)=>[...g.buys,...g.sells].filter(e=>!e.settled).map(e=>({...e,gi})))}
+
+function calcGroupDisp(gi,type){
+  const own=type==='buy'?S.groups[gi].buys:S.groups[gi].sells;
+  const ownIds=new Set(own.map(e=>e.id));
+  const carried=(S.carries[gi]||[]).map(id=>entryById(id)).filter(e=>e&&!ownIds.has(e.id)&&e.type===type);
+  return [...carried,...own].sort((a,b)=>(b.price||0)-(a.price||0));
+}
+
+/* 1日の確定損益 (3スロット合算) */
+function dayProfit(dstr){
+  let t=0,any=false;
+  for(let slot=0;slot<3;slot++){
+    const ss=S.settles[`${dstr}_${slot}`]||[];
+    for(const s of ss){
+      const e=entryById(s.posId);if(!e||!e.price||!s.exitPrice)continue;
+      t+=(e.type==='buy'?s.exitPrice-e.price:e.price-s.exitPrice)*C.sh;any=true;
+    }
+  }
+  return any?t:null;
+}
+function monthProfit(){
+  const days=C.days||wds(S.year,S.month);let t=0;
+  for(const d of days){const p=dayProfit(ds(d));if(p)t+=p;}
+  return t;
+}
+
+/* ═══════════════════════ 6ヶ月自動決済 ═══════════════════════ */
+function checkAutoSettle(revDstr){
+  const ep=S.prices[revDstr];if(!ep)return;
+  const key=`${revDstr}_2`; // 自動決済はslot2（終値）
+  for(const g of S.groups){
+    for(const arr of[g.buys,g.sells]){
+      for(const e of arr){
+        if(e.settled||!isExp(e.date,revDstr))continue;
+        if(!S.settles[key])S.settles[key]=[];
+        if(S.settles[key].some(x=>x.posId===e.id))continue;
+        S.settles[key].push({id:S.idc++,posId:e.id,exitPrice:ep,auto:true,settledGi:e.gi});
+        e.settled=true;
+      }
+    }
+  }
+}
+
+/* 期限接近ポジション */
+function warnPositions(){
+  if(!S.revealed||!C.days)return[];
+  const lastD=C.lastD||ds(C.days[S.revealed-1]);
+  const warnD=new Date(lastD);warnD.setDate(warnD.getDate()+30);
+  const warnStr=ds(warnD);
+  return C.open.filter(e=>addM6(e.date)<=warnStr);
+}
+
+/* グループ移行スナップショット */
+function snapshotCarries(fromGi,toGi){
+  if(toGi>=N_GROUPS)return;
+  const ownIds=[...S.groups[fromGi].buys,...S.groups[fromGi].sells].map(e=>e.id);
+  const carriedIds=S.carries[fromGi]||[];
+  const allIds=[...new Set([...carriedIds,...ownIds])];
+  const unsettled=allIds.filter(id=>{const e=entryById(id);return e&&!e.settled;});
+  const existing=new Set(S.carries[toGi]);
+  for(const id of unsettled)existing.add(id);
+  S.carries[toGi]=[...existing];
+}
+
+/* ═══════════════════════ ACTIONS ═══════════════════════ */
+function nowTime(){const n=new Date();return `${pad(n.getHours())}:${pad(n.getMinutes())}`}
+
+function toggleOrder(slotKey,type){
+  if(!S.orders[slotKey])S.orders[slotKey]={buyId:null,sellId:null};
+  const ord=S.orders[slotKey];
+  const key=type==='buy'?'buyId':'sellId';
+  if(ord[key]!==null){
+    rmFromGroups(ord[key]);ord[key]=null;
+  } else {
+    const {dstr,slot}=parseSlotKey(slotKey);
+    const price=getSlotPrice(dstr,slot);
+    const id=S.idc++;
+    ord[key]=id;
+    const g=S.groups[S.gi];
+    const e={id,date:dstr,price,type,settled:false,time:nowTime()};
+    if(type==='buy'){g.buys.push(e);g.buys.sort((a,b)=>(b.price||0)-(a.price||0));}
+    else{g.sells.push(e);g.sells.sort((a,b)=>(b.price||0)-(a.price||0));}
+  }
+  R();
+}
+
+function rmFromGroups(id){
+  S.groups.forEach(g=>{g.buys=g.buys.filter(e=>e.id!==id);g.sells=g.sells.filter(e=>e.id!==id)});
+}
+
+function openSF(slotKey){
+  const {dstr,slot}=parseSlotKey(slotKey);
+  S.sfDs=slotKey;S.selPos=null;S.exitInp=String(getSlotPrice(dstr,slot)||'');R();
+}
+function closeSF(){S.sfDs=null;S.selPos=null;S.exitInp='';R()}
+function selPosF(id){S.selPos=id;R()}
+
+function confirmSettle(){
+  const slotKey=S.sfDs;
+  if(!S.selPos){alert('ポジションを選択してください');return}
+  const ep=parseFloat(S.exitInp);
+  if(!ep||isNaN(ep)){alert('決済価格を入力してください');return}
+  if(!S.settles[slotKey])S.settles[slotKey]=[];
+  S.settles[slotKey].push({id:S.idc++,posId:S.selPos,exitPrice:ep,auto:false,settledGi:S.gi,time:nowTime()});
+  const e=entryById(S.selPos);if(e)e.settled=true;
+  S.sfDs=null;S.selPos=null;S.exitInp='';R();
+}
+
+function rmSettle(slotKey,sid){
+  const ss=S.settles[slotKey];if(!ss)return;
+  const s=ss.find(x=>x.id===sid);
+  if(s){const e=entryById(s.posId);if(e)e.settled=false;}
+  S.settles[slotKey]=ss.filter(x=>x.id!==sid);R();
+}
+
+function reveal(){
+  const days=C.days||wds(S.year,S.month);
+  if(S.revealed<days.length){S.revealed++;checkAutoSettle(ds(days[S.revealed-1]));R();}
+}
+function revealAll(){
+  const days=C.days||wds(S.year,S.month);
+  while(S.revealed<days.length){S.revealed++;checkAutoSettle(ds(days[S.revealed-1]));}R();
+}
+function advGrp(){if(S.gi<N_GROUPS-1){snapshotCarries(S.gi,S.gi+1);S.gi++;R()}}
+function prevGrp(){if(S.gi>0){S.gi--;R()}}
+
+function resetMonthData(){
+  S.revealed=0;S.orders={};S.settles={};S.groups=mkGroups();
+  S.carries=Array.from({length:N_GROUPS},()=>[]);
+  S.groupMemos=Array.from({length:N_GROUPS},()=>'');
+  S.slotPrices={};S.gi=0;S.idc=1;
+  // ※ prices/openPrices はリセットしない（月またぎで共有）
+}
+function resetMonth(){resetMonthData();R();}
+
+/* ═══════════════════════ IMPORT ═══════════════════════ */
+function parseDate(s){
+  if(!s)return null;s=String(s).trim();
+  if(/^\d{5}$/.test(s)){const d=new Date((+s-25569)*86400000);if(!isNaN(d))return ds(d);}
+  let m=s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
+  if(m)return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m)return `${m[3]}-${pad(+m[1])}-${pad(+m[2])}`;
+  m=s.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日/);
+  if(m)return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+  m=s.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if(m)return `${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
+function parsePriceStr(s){
+  if(s==null||s==='')return null;
+  const v=parseFloat(String(s).replace(/,/g,''));return isNaN(v)?null:v;
+}
+function parseImportText(text){
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+  const results=[],errs=[];
+  for(let i=0;i<lines.length;i++){
+    const ln=lines[i];
+    const sep=ln.includes('\t')?'\t':',';
+    const cols=ln.split(sep).map(c=>c.trim().replace(/^"|"$/g,''));
+    if(cols.length<2)continue;
+    let dstr=null;
+    let nums=[]; // 日付列以降の数値を順に収集
+    for(let ci=0;ci<Math.min(cols.length,4);ci++){
+      const d=parseDate(cols[ci]);
+      if(d){
+        dstr=d;
+        // 日付列の後ろから最大6個の数値列を収集
+        for(let pi=ci+1;pi<Math.min(cols.length,ci+7);pi++){
+          const p=parsePriceStr(cols[pi]);
+          if(p&&p>0) nums.push(p);
+        }
+        break;
+      }
+    }
+    if(!dstr||!nums.length){if(i<5)continue;errs.push(`行${i+1}: "${ln.substring(0,40)}" → 解析不可`);continue;}
+
+    let open=null,close=null;
+    if(nums.length>=4){
+      // OHLC形式: 始値,高値,安値,終値[,出来高...]
+      open=nums[0]; close=nums[3];
+    } else if(nums.length===3){
+      // 始値,安値,終値 or 始値,高値,終値 など
+      open=nums[0]; close=nums[2];
+    } else if(nums.length===2){
+      // 始値,終値
+      open=nums[0]; close=nums[1];
+    } else {
+      // 終値のみ
+      close=nums[0];
+    }
+    results.push({date:dstr,open,close});
+  }
+  return {results,errs};
+}
+function applyImportData(results){
+  let cnt=0;
+  for(const r of results){
+    if(r.date&&r.close>0){
+      S.prices[r.date]=r.close;
+      if(r.open&&r.open>0) S.openPrices[r.date]=r.open;
+      cnt++;
+    }
+  }
+  return cnt;
+}
+function handleCSVFile(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const text=e.target.result;
+    const {results,errs}=parseImportText(text);
+    const cnt=applyImportData(results);
+    const hasOpen=results.some(r=>r.open);
+    const preview=results.slice(0,5).map(r=>({date:r.date,open:r.open,close:r.close}));
+    S.impStat=cnt===0
+      ?{type:'err',msg:'データを読み取れませんでした。',count:0,preview:[],hasOpen:false}
+      :{type:errs.length?'warn':'ok',
+        msg:`${cnt}件のデータを読み込みました${hasOpen?' (始値・終値)':'（終値のみ）'}${errs.length?' ／'+errs.length+'行スキップ':''}`,
+        count:cnt,preview,hasOpen};
+    S.prOpen=true;
+    R();
+  };
+  reader.readAsText(file,'UTF-8');
+}
+function applyPasteText(){
+  const text=S.pasteText;
+  if(!text.trim()){S.impStat={type:'err',msg:'テキストを入力してください',count:0,preview:[]};R();return;}
+  const {results,errs}=parseImportText(text);
+  const cnt=applyImportData(results);
+  const hasOpen=results.some(r=>r.open);
+  const preview=results.slice(0,5);
+  S.impStat=cnt===0
+    ?{type:'err',msg:'データを解析できませんでした。',count:0,preview:[],hasOpen:false}
+    :{type:errs.length?'warn':'ok',
+      msg:`${cnt}件のデータを取り込みました${hasOpen?' (始値・終値)':'（終値のみ）'}${errs.length?' ／'+errs.length+'行スキップ':''}`,
+      count:cnt,preview,hasOpen};
+  S.prOpen=true;
+  R();
+}
+function handleDrop(e){e.preventDefault();const file=e.dataTransfer.files[0];if(file)handleCSVFile(file);}
+
+/* ═══════════════════════ LOCAL STORAGE ═══════════════════════ */
+const LS_PRE='katotre3s_'; // 3スロット版は別プレフィックス
+const LS_PRICES=LS_PRE+'prices';
+const LS_META=LS_PRE+'meta';
+function lsKey(y,m){return LS_PRE+y+'_'+String(m).padStart(2,'0');}
+
+function lsSave(){
+  try{
+    const md={revealed:S.revealed,orders:S.orders,settles:S.settles,
+      groups:S.groups,carries:S.carries,gi:S.gi,idc:S.idc,
+      groupMemos:S.groupMemos,slotPrices:S.slotPrices};
+    localStorage.setItem(lsKey(S.year,S.month),JSON.stringify(md));
+    // prices と openPrices を1つのオブジェクトに格納
+    localStorage.setItem(LS_PRICES,JSON.stringify({prices:S.prices,openPrices:S.openPrices}));
+    localStorage.setItem(LS_META,JSON.stringify({
+      stock:S.stock,code:S.code,capital:S.capital,shares:S.shares,
+      prevP:S.prevP,memo:S.memo,fukumi:S.fukumi,
+      rule3On:S.rule3On,rule3Pct:S.rule3Pct,year:S.year,month:S.month,
+      liveP:S.liveP,dailyTarget:S.dailyTarget,maxDailyLoss:S.maxDailyLoss,lossLockPct:S.lossLockPct
+    }));
+  }catch(e){console.warn('save err',e);}
+}
+function lsLoadMonth(y,m){
+  try{
+    const raw=localStorage.getItem(lsKey(y,m));if(!raw)return false;
+    const d=JSON.parse(raw);
+    S.revealed=d.revealed||0;S.orders=d.orders||{};S.settles=d.settles||{};
+    S.groups=d.groups||mkGroups();
+    S.carries=d.carries||Array.from({length:N_GROUPS},()=>[]);
+    S.gi=d.gi||0;S.idc=d.idc||1;
+    S.groupMemos=d.groupMemos||Array.from({length:N_GROUPS},()=>'');
+    S.slotPrices=d.slotPrices||{};
+    // 旧データのcarries/groupMemosが12個だった場合に拡張
+    while(S.carries.length<N_GROUPS)S.carries.push([]);
+    while(S.groupMemos.length<N_GROUPS)S.groupMemos.push('');
+    return true;
+  }catch(e){return false;}
+}
+function lsLoadPrices(){
+  try{
+    const r=localStorage.getItem(LS_PRICES);if(!r)return;
+    const d=JSON.parse(r);
+    // 新形式: {prices:{...}, openPrices:{...}}
+    // 旧形式: {dstr:price, ...} (フラットオブジェクト)
+    if(d.prices){
+      S.prices=d.prices||{};
+      S.openPrices=d.openPrices||{};
+    } else {
+      S.prices=d; // 旧形式互換
+      S.openPrices={};
+    }
+  }catch(e){}
+}
+function lsLoadMeta(){
+  try{
+    const r=localStorage.getItem(LS_META);if(!r)return;
+    const d=JSON.parse(r);
+    S.stock=d.stock||'';S.code=d.code||'';S.capital=d.capital||'';S.shares=d.shares||'';
+    S.prevP=d.prevP||'';S.memo=d.memo||'';S.fukumi=d.fukumi||'';
+    if(d.rule3On!==undefined)S.rule3On=d.rule3On;
+    if(d.rule3Pct)S.rule3Pct=d.rule3Pct;
+    if(d.year)S.year=d.year;if(d.month)S.month=d.month;
+    if(d.liveP!==undefined)S.liveP=d.liveP;
+    if(d.dailyTarget!==undefined)S.dailyTarget=d.dailyTarget;
+    if(d.maxDailyLoss!==undefined)S.maxDailyLoss=d.maxDailyLoss;
+    if(d.lossLockPct)S.lossLockPct=d.lossLockPct;
+  }catch(e){}
+}
+function lsClearMonth(y,m){
+  if(!confirm(y+'年'+m+'月のデータを消去しますか？'))return;
+  localStorage.removeItem(lsKey(y,m));resetMonthData();R();
+}
+function lsClearAll(){
+  if(!confirm('全データを消去しますか？この操作は元に戻せません。'))return;
+  Object.keys(localStorage).filter(k=>k.startsWith(LS_PRE)).forEach(k=>localStorage.removeItem(k));
+  location.reload();
+}
+function lsSavedList(){
+  return Object.keys(localStorage)
+    .filter(k=>k.startsWith(LS_PRE)&&k!==LS_PRICES&&k!==LS_META)
+    .map(k=>{const p=k.replace(LS_PRE,'').split('_');return{y:+p[0],m:+p[1]};})
+    .sort((a,b)=>a.y!==b.y?a.y-b.y:a.m-b.m);
+}
+function rSavedList(){
+  const list=lsSavedList();
+  if(!list.length)return '<span style="color:var(--muted)">なし</span>';
+  return list.map(x=>{
+    const cur=x.y===S.year&&x.m===S.month;
+    return `<span class="saved-tag ${cur?'cur':''}" onclick="S.year=${x.y};S.month=${x.m};lsLoadMonth(${x.y},${x.m})||resetMonthData();R()">${x.y}/${x.m}</span>`;
+  }).join(' ');
+}
+
+/* ═══════════════════════ RENDER ═══════════════════════ */
+let _saveTimer=null;
+function R(){
+  buildCache();
+  document.getElementById('app').innerHTML=rApp();
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(lsSave,400);
+}
+
+function rApp(){
+  const days=C.days;
+  const warns=warnPositions();
+  const lastDs_=C.lastD;
+
+  const memoBlock=`<div class="memo-sticky${S.memoSticky&&!S.memoBelow?'':' no-sticky'}">${rMemo()}</div>`;
+
+  const tradeCard=`<div class="card">
+    <div class="ch">
+      <span>📈 トレード記録</span>
+      <span class="tag-note">${S.stock||'銘柄未設定'}${S.code?' ('+S.code+')':''}</span>
+      <span style="font-size:10px;color:var(--sub)">①始値 ②中値=(①+③)÷2 ③終値 / 差＝①前日比 ②始→中 ③中→終</span>
+      <span style="font-size:10px;color:var(--purple);background:var(--purple-lt);border-radius:4px;padding:1px 5px">紫行＝両建て</span>
+    </div>
+    <div class="table-wrap">${rTable(days)}</div>
+  </div>`;
+
+  return `
+    ${rCtrl(days)}
+    ${warns.length?rBanner(warns):''}
+    ${rPriceSetup(days)}
+    ${rSosai()}
+    ${rHighLow(days)}
+    ${S.memoBelow
+      ? `<div class="left-panel" style="max-width:100%">${tradeCard}</div>${memoBlock}`
+      : `<div class="layout">
+           <div class="left-panel">${tradeCard}</div>
+           <div class="right-panel">${memoBlock}</div>
+         </div>`
+    }
+    ${rBottom()}
+    <div class="fixed-reveal">
+      <span class="rev-info">公開 ${S.revealed}/${days.length}日${lastDs_?' 〜'+fd(lastDs_):''}</span>
+      <button class="btn btn-green" onclick="reveal()" ${S.revealed>=days.length?'disabled':''}>📅 翌日更新</button>
+      <div style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.6);border-radius:7px;padding:5px 10px;backdrop-filter:blur(4px)">
+        <button class="btn btn-outline btn-sm" style="background:rgba(255,255,255,.9);padding:4px 10px" onclick="prevGrp()" ${S.gi<=0?'disabled':''}>◄前</button>
+        <span style="font-size:14px;font-weight:900;color:#fff;min-width:30px;text-align:center">${NUMS[S.gi]}</span>
+        <button class="btn btn-outline btn-sm" style="background:rgba(255,255,255,.9);padding:4px 10px" onclick="advGrp()" ${S.gi>=N_GROUPS-1?'disabled':''}>次►</button>
+      </div>
+    </div>`;
+}
+
+/* ─── ライブダッシュボード（フェーズ1/2） ─── */
+function calcFukumi(){
+  // 全グループの未決済ポジションの含み損益合計
+  const curP=C.curP;const sh=C.sh;
+  if(!curP)return null;
+  let total=0,cnt=0;
+  for(const g of S.groups){
+    for(const e of [...g.buys,...g.sells]){
+      if(e.settled||!e.price)continue;
+      total+=(e.type==='buy'?curP-e.price:e.price-curP)*sh;
+      cnt++;
+    }
+  }
+  return cnt>0?{val:total,cnt}:null;
+}
+
+function calcTodaySettled(){
+  // 本日日付（ライブ想定: 最後に公開した日）の確定損益
+  const lastD=C.lastD;if(!lastD)return 0;
+  const sh=C.sh;let t=0;
+  for(let slot=0;slot<3;slot++){
+    const ss=S.settles[`${lastD}_${slot}`]||[];
+    for(const s of ss){
+      const e=entryById(s.posId);if(!e||!e.price||!s.exitPrice)continue;
+      t+=(e.type==='buy'?s.exitPrice-e.price:e.price-s.exitPrice)*sh;
+    }
+  }
+  return Math.round(t);
+}
+
+function calcNextPrices(){
+  // 現在の未決済ポジション群から「次に追加できる価格」を計算
+  const curP=C.curP;
+  if(!curP||!S.rule3On)return null;
+  const open=C.open;
+  const buys=open.filter(e=>e.type==='buy'&&e.price);
+  const sells=open.filter(e=>e.type==='sell'&&e.price);
+  const pct=S.rule3Pct||3;
+
+  function nextBuy(){
+    if(!buys.length)return {price:curP,label:'制限なし（初回）'};
+    const lowestBuy=Math.min(...buys.map(e=>e.price));
+    const threshold=calcThreshold(lowestBuy,pct);
+    const nextP=lowestBuy-threshold;
+    return {price:Math.round(nextP),diff:Math.round(curP-nextP),ok:curP<=nextP,label:`最安買値${fn(lowestBuy)}円 −${fn(threshold)}円`};
+  }
+  function nextSell(){
+    if(!sells.length)return {price:curP,label:'制限なし（初回）'};
+    const highestSell=Math.max(...sells.map(e=>e.price));
+    const threshold=calcThreshold(highestSell,pct);
+    const nextP=highestSell+threshold;
+    return {price:Math.round(nextP),diff:Math.round(nextP-curP),ok:curP>=nextP,label:`最高売値${fn(highestSell)}円 +${fn(threshold)}円`};
+  }
+  return {buy:nextBuy(),sell:nextSell()};
+}
+
+function calcLossLock(){
+  // 損切りライン：各未決済ポジションが建値からlossLockPct%動いたときの損失
+  const sh=C.sh;const pct=S.lossLockPct||3;
+  const open=C.open;if(!open.length)return null;
+  const items=open.filter(e=>e.price).map(e=>{
+    const lossPrice=e.type==='buy'
+      ?Math.round(e.price*(1-pct/100))
+      :Math.round(e.price*(1+pct/100));
+    const lossAmt=Math.round(Math.abs(lossPrice-e.price)*sh);
+    return{...e,lossPrice,lossAmt};
+  });
+  const totalLoss=-items.reduce((s,e)=>s+e.lossAmt,0);
+  return{items,totalLoss};
+}
+
+function rLiveDash(){
+  const curP=C.curP;
+  const fukumi=calcFukumi();
+  const todayPL=calcTodaySettled();
+  const target=parseFloat(S.dailyTarget)||0;
+  const maxLoss=parseFloat(S.maxDailyLoss)||0; // 負の値
+  const sh=C.sh;
+
+  // 含み損益
+  const fukumiVal=fukumi?fukumi.val:null;
+  const fukumiCl=fukumiVal===null?'neu':fukumiVal>0?'pos':fukumiVal<0?'neg':'neu';
+
+  // 今日の総損益（確定＋含み）
+  const totalPL=todayPL+(fukumiVal||0);
+
+  // 最大損失アラート
+  const lossAlert=maxLoss<0&&totalPL<=maxLoss;
+
+  // 目標達成率
+  const targetPct=target>0?Math.min(100,Math.max(0,Math.round(todayPL/target*100))):null;
+  const targetColor=targetPct===null?'#546E7A':targetPct>=100?'#69F0AE':targetPct>=50?'#FFD740':'#FF5252';
+
+  // 次の指値
+  const next=calcNextPrices();
+
+  if(!S.dashOpen){
+    return `<div class="live-bar" style="cursor:pointer" onclick="S.dashOpen=true;R()">
+      <div style="padding:8px 16px;display:flex;align-items:center;gap:12px;color:#78909C;font-size:11px">
+        <span style="font-weight:700;color:#E8EDF2">📊 ライブダッシュボード</span>
+        ${curP?`<span>現在値: <b style="color:#E8EDF2">${fn(curP)}円</b></span>`:''}
+        ${fukumiVal!==null?`<span>含み: <b style="color:${fukumiVal>=0?'#69F0AE':'#FF5252'}">${fukumiVal>=0?'+':''}${fn(Math.round(fukumiVal))}円</b></span>`:''}
+        <span style="margin-left:auto">▼ 展開</span>
+      </div>
+    </div>`;
+  }
+
+  return `<div class="live-bar ${lossAlert?'loss-alert':''}">
+    <div style="padding:6px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.06)">
+      <span style="font-size:11px;font-weight:700;color:#90A4AE;letter-spacing:.05em">📊 ライブダッシュボード</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        ${lossAlert?`<span style="color:#FF5252;font-weight:900;font-size:11px;animation:pulse .6s infinite alternate">⚠️ 最大損失ラインに到達！</span>`:''}
+        <button onclick="S.dashOpen=false;R()" style="background:none;border:none;cursor:pointer;color:#546E7A;font-size:11px;padding:2px 6px">▲ 閉じる</button>
+      </div>
+    </div>
+    <div class="live-bar-inner">
+
+      <!-- 現在値入力 -->
+      <div class="live-cell" style="min-width:160px">
+        <span class="live-label">⚡ 現在値（手動）</span>
+        <input class="live-price-inp" type="number" value="${S.liveP||''}" placeholder="価格を入力"
+          oninput="S.liveP=this.value;buildCache();document.getElementById('app').innerHTML=rApp()">
+        ${curP?`<span style="font-size:9px;color:#546E7A;margin-top:2px">参照値: ${fn(curP)}円</span>`:''}
+      </div>
+
+      <!-- 含み損益 -->
+      <div class="live-cell">
+        <span class="live-label">📦 含み損益（${fukumi?fukumi.cnt:0}件）</span>
+        <span class="live-val ${fukumiCl}">
+          ${fukumiVal!==null?(fukumiVal>=0?'+':'')+fn(Math.round(fukumiVal))+'円':'— 円'}
+        </span>
+      </div>
+
+      <!-- 今日の確定損益 -->
+      <div class="live-cell">
+        <span class="live-label">✅ 今日の確定損益</span>
+        <span class="live-val ${todayPL>0?'pos':todayPL<0?'neg':'neu'}">
+          ${todayPL>=0?'+':''}${fn(todayPL)}円
+        </span>
+      </div>
+
+      <!-- 今日の合計（確定＋含み） -->
+      <div class="live-cell">
+        <span class="live-label">💰 本日合計（確定＋含み）</span>
+        <span class="live-val ${totalPL>0?'pos':totalPL<0?'neg':'neu'}" style="font-size:22px">
+          ${totalPL>=0?'+':''}${fn(Math.round(totalPL))}円
+        </span>
+      </div>
+
+      <!-- 目標達成バー -->
+      <div class="target-bar-wrap">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+          <span class="live-label">🎯 目標達成率</span>
+          <span style="font-size:10px;color:#90A4AE">
+            ${target?`${fn(todayPL)}/${fn(target)}円`:'目標未設定'}
+          </span>
+        </div>
+        <div class="target-bar-bg">
+          <div class="target-bar-fill" style="width:${targetPct||0}%;background:${targetColor}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:2px">
+          <span style="font-size:10px;color:${targetColor};font-weight:700">${targetPct!==null?targetPct+'%':''}</span>
+          <input type="number" placeholder="目標(円)" value="${S.dailyTarget||''}"
+            style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:#fff;font-size:10px;width:80px;padding:1px 5px;text-align:right"
+            oninput="S.dailyTarget=this.value;R()">
+        </div>
+        <!-- 最大損失設定 -->
+        <div style="display:flex;align-items:center;gap:4px;margin-top:4px;border-top:1px solid rgba(255,255,255,.06);padding-top:4px">
+          <span style="font-size:9px;color:#78909C;white-space:nowrap">損失上限:</span>
+          <input type="number" placeholder="-例:-30000" value="${S.maxDailyLoss||''}"
+            style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:#FF5252;font-size:10px;width:90px;padding:1px 5px;text-align:right"
+            oninput="S.maxDailyLoss=this.value;R()">
+          <span style="font-size:9px;color:#78909C">円</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 次の指値候補 & 損切りライン -->
+    <div style="display:flex;flex-wrap:wrap;gap:0;border-top:1px solid rgba(255,255,255,.06)">
+      <!-- 次の指値候補 -->
+      <div style="flex:1;padding:8px 14px;min-width:260px">
+        <div style="font-size:9px;color:#78909C;font-weight:700;margin-bottom:6px;letter-spacing:.05em">
+          📍 次の指値候補（ルール間隔 ${S.rule3Pct}%）
+          <span style="font-size:9px;color:#546E7A;font-weight:400;margin-left:6px">現在グループ ${NUMS[S.gi]}</span>
+        </div>
+        ${next?(()=>{
+          const b=next.buy,s=next.sell;
+          return `<div style="display:flex;gap:12px;flex-wrap:wrap">
+            <div>
+              <span style="font-size:9px;color:#90CAF9;font-weight:700">○ 次の買い指値</span><br>
+              <span style="font-size:16px;font-weight:900;color:${b.ok||!b.diff?'#69F0AE':'#90CAF9'}">${fn(b.price)}円</span>
+              ${b.diff!=null?`<span style="font-size:10px;color:${curP&&curP<=b.price?'#69F0AE':'#546E7A'}">
+                ${curP&&curP<=b.price?'✓ 到達中':`あと -${fn(b.diff)}円`}
+              </span>`:''}
+              <div style="font-size:9px;color:#546E7A;margin-top:1px">${b.label}</div>
+            </div>
+            <div>
+              <span style="font-size:9px;color:#EF9A9A;font-weight:700">× 次の売り指値</span><br>
+              <span style="font-size:16px;font-weight:900;color:${s.ok||!s.diff?'#69F0AE':'#EF9A9A'}">${fn(s.price)}円</span>
+              ${s.diff!=null?`<span style="font-size:10px;color:${curP&&curP>=s.price?'#69F0AE':'#546E7A'}">
+                ${curP&&curP>=s.price?'✓ 到達中':`あと +${fn(s.diff)}円`}
+              </span>`:''}
+              <div style="font-size:9px;color:#546E7A;margin-top:1px">${s.label}</div>
+            </div>
+          </div>`;
+        })():'<span style="font-size:10px;color:#546E7A">未決済ポジションなし / 現在値未入力</span>'}
+      </div>
+
+      <!-- 損切りライン -->
+      <div style="flex:1;padding:8px 14px;border-left:1px solid rgba(255,255,255,.06);min-width:220px">
+        <div style="font-size:9px;color:#78909C;font-weight:700;margin-bottom:4px;letter-spacing:.05em">
+          🛑 損切りライン（建値から
+          <input type="number" value="${S.lossLockPct||3}" min="0.5" max="20" step="0.5"
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:3px;color:#FFD740;font-size:10px;width:36px;padding:0 3px;text-align:center"
+            oninput="S.lossLockPct=Math.min(20,Math.max(0.5,+this.value||3));R()">%）
+        </div>
+        ${(()=>{
+          const ll=calcLossLock();if(!ll||!ll.items.length)return '<span style="font-size:10px;color:#546E7A">未決済ポジションなし</span>';
+          const rows=ll.items.slice(0,4).map(e=>`
+            <div style="display:flex;align-items:center;gap:6px;font-size:10px;padding:1px 0">
+              <span style="color:${e.type==='buy'?'#90CAF9':'#EF9A9A'}">${e.type==='buy'?'○':'×'}</span>
+              <span style="color:#90A4AE">${e.price?fn(e.price):'—'}</span>
+              <span style="color:#546E7A">→ 損切 <b style="color:#FF5252">${fn(e.lossPrice)}</b></span>
+              <span style="color:#FF7043;font-weight:700">-${fn(e.lossAmt)}円</span>
+              ${C.curP&&((e.type==='buy'&&C.curP<=e.lossPrice)||(e.type==='sell'&&C.curP>=e.lossPrice))?'<span style="color:#FF1744;font-weight:900;font-size:9px">⚠警告</span>':''}
+            </div>`).join('');
+          return `${rows}
+            <div style="margin-top:3px;padding-top:3px;border-top:1px solid rgba(255,255,255,.08);font-size:10px">
+              損切り時の最大損失計: <b style="color:#FF5252">${fn(ll.totalLoss)}円</b>
+            </div>`;
+        })()}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ─── 期限警告バナー ─── */
+function rBanner(arr){
+  const lastD=C.lastD;
+  const items=arr.map(e=>{
+    const expired=lastD&&isExp(e.date,lastD);
+    return `<span style="margin-right:10px">
+      <span class="${e.type==='buy'?'tb':'ts'}">${e.type==='buy'?'○':'×'}</span>
+      ${fd(e.date)} → 期限:${fd(addM6(e.date))}
+      ${expired?'<span style="color:var(--red);font-weight:700"> ⚠期限超過</span>':'<span style="color:var(--warn)"> ⚠30日以内</span>'}
+    </span>`;
+  }).join('');
+  return `<div class="expire-banner">⚠️ 信用期限アラート<span class="items">${items}</span></div>`;
+}
+
+/* ─── コントロールバー ─── */
+function rCtrl(days){
+  const lastDs_=S.revealed>0?ds(days[S.revealed-1]):null;
+  return `<div class="card"><div class="ctrl-bar">
+    <div class="ctrl"><label>年</label>
+      <input type="number" style="width:68px" value="${S.year}"
+        onchange="S.year=+this.value||S.year;if(!lsLoadMonth(S.year,S.month)){resetMonthData();}R()">
+    </div>
+    <div class="ctrl"><label>月</label>
+      <input type="number" style="width:50px" min="1" max="12" value="${S.month}"
+        onchange="S.month=Math.min(12,Math.max(1,+this.value||1));if(!lsLoadMonth(S.year,S.month)){resetMonthData();}R()">
+    </div>
+    <div class="ctrl"><label>銘柄</label>
+      <input type="text" style="width:115px" value="${S.stock}" oninput="S.stock=this.value">
+    </div>
+    <div class="ctrl"><label>証券コード</label>
+      <input type="text" style="width:72px" value="${S.code}" oninput="S.code=this.value">
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--sub)">公開:${S.revealed}/${days.length}日${lastDs_?' (〜'+fd(lastDs_)+')':''}</span>
+      <button class="btn btn-green" onclick="reveal()">📅 翌日更新</button>
+      <button class="btn btn-outline btn-sm" onclick="revealAll()">全表示</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red-md)" onclick="lsClearMonth(S.year,S.month)">🗑 今月消去</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="lsClearAll()">⚠ 全消去</button>
+    </div>
+  </div>
+  <div style="padding:4px 14px;background:#FFF8F0;border-top:1px solid var(--border);font-size:11px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span style="font-weight:700;color:var(--orange)">📏 ルール間隔</span>
+    <button class="btn btn-sm" style="padding:2px 10px;background:${S.rule3On?'var(--blue)':'#E0E0E0'};color:${S.rule3On?'#fff':'var(--sub)'}" onclick="S.rule3On=!S.rule3On;R()">
+      ${S.rule3On?'ON':'OFF'}
+    </button>
+    <div class="ctrl" style="${S.rule3On?'':'opacity:.4;pointer-events:none'}">
+      <label>間隔</label>
+      <input type="number" style="width:50px" min="1" max="10" step="0.5" value="${S.rule3Pct}" oninput="S.rule3Pct=Math.min(10,Math.max(0.5,+this.value||3));R()">
+      <span>%</span>
+      <span style="font-size:10px;color:var(--sub)">(${C.lastD&&S.prices[C.lastD]?fn(calcThreshold(S.prices[C.lastD],S.rule3Pct))+'円以上の間隔':'終値公開後に表示'})</span>
+    </div>
+    <span style="font-size:10px;color:var(--sub)">同方向の新規追加に${S.rule3Pct}%の価格差が必要</span>
+  </div>
+  <div style="padding:4px 14px;background:#FAFBFC;border-top:1px solid var(--border);font-size:10px;color:var(--sub);display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+    <span style="font-weight:700">💾 保存済み:</span>${rSavedList()}
+  </div></div>`;
+}
+
+/* ─── 終値データ設定 ─── */
+function rPriceSetup(days){
+  const loaded=days.filter(d=>S.prices[ds(d)]).length;
+  const total=days.length;
+  const pct=total?Math.round(loaded/total*100):0;
+  const barColor=pct===100?'var(--green)':'var(--blue)';
+  return `<div class="card">
+    <div class="ch" style="cursor:pointer" onclick="S.prOpen=!S.prOpen;R()">
+      <span>📊 終値データ設定</span>
+      <span style="font-size:11px;color:${pct===100&&total>0?'var(--green)':'var(--sub)'}">
+        ${loaded}/${total}日 読込済 (${pct}%)
+      </span>
+      <div style="flex:0 0 100px;background:#E8EDF2;border-radius:4px;height:6px">
+        <div style="width:${pct}%;background:${barColor};height:6px;border-radius:4px;transition:width .3s"></div>
+      </div>
+      <span style="margin-left:auto;font-size:10px;color:var(--sub)">翌日更新で1日ずつ公開 ${S.prOpen?'▲':'▼'}</span>
+    </div>
+    ${S.prOpen?rPriceSetupBody():''}
+  </div>`;
+}
+function rPriceSetupBody(){
+  const stat=S.impStat;
+  const openCount=Object.keys(S.openPrices).length;
+  const closeCount=Object.keys(S.prices).length;
+
+  // プレビュー行を関数で生成（ネストを浅くする）
+  function previewRows(){
+    if(!stat||!stat.preview||!stat.preview.length) return '';
+    const rows=stat.preview.map(r=>{
+      const dH=`<span class="mono">${r.date||''}</span>`;
+      const oH=r.open?`<span style="color:var(--blue);margin-left:6px">始:${fn(r.open)}</span>`:'';
+      const mH=(r.open&&r.close)?`<span style="color:var(--purple);margin-left:6px">中:${fn(Math.round((r.open+r.close)/2))}</span>`:'';
+      const cH=`<span style="font-weight:700;margin-left:6px">終:${fn(r.close)}円</span>`;
+      return `<div class="imp-prow">${dH}${oH}${mH}${cH}</div>`;
+    }).join('');
+    const moreH=stat.count>5?`<div class="imp-prow" style="color:var(--sub)">…他${stat.count-5}件</div>`:'';
+    return `<div class="imp-preview">${rows}${moreH}</div>`;
+  }
+
+  const statH=stat?`<div class="imp-stat ${stat.type}" style="margin-top:8px">
+    ${stat.type==='ok'?'✅':stat.type==='warn'?'⚠️':'❌'} ${stat.msg}
+    ${previewRows()}
+  </div>`:'';
+
+  return `<div class="cb" style="padding:12px 14px">
+    <div class="imp-hint">
+      スプレッドシートの <b>日付・始値・高値・安値・終値</b> 列をコピー&amp;ペーストしてください。<br>
+      ① 始値 / ② (始値+終値)÷2 / ③ 終値　が自動設定されます。<br>
+      <span style="color:var(--blue)">●始値</span>が読み取れた場合はそのまま表示。終値のみの場合は①②に手動入力できます。<br>
+      例(OHLC): <span class="mono" style="background:#F5F7FA;padding:1px 5px;border-radius:3px">2024/1/5　1300　1350　1280　1320</span>
+      　例(終値のみ): <span class="mono" style="background:#F5F7FA;padding:1px 5px;border-radius:3px">2024/1/5　1320</span>
+    </div>
+    ${openCount>0?`<div style="font-size:10px;background:var(--blue-lt);color:var(--blue);border-radius:4px;padding:3px 8px;margin-bottom:6px">✅ 始値データ読込済: ${openCount}日 ／ 終値: ${closeCount}日</div>`:''}
+    <textarea class="imp-paste-area" placeholder="ここにコピーしたデータを貼り付け... (Ctrl+V)"
+      oninput="S.pasteText=this.value">${S.pasteText||''}</textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-blue btn-sm" onclick="applyPasteText()">✅ 取り込む</button>
+      <button class="btn btn-outline btn-sm" onclick="S.pasteText='';S.impStat=null;R()">クリア</button>
+      ${closeCount?`<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red-md)"
+        onclick="if(confirm('全価格データをクリアしますか？')){S.prices={};S.openPrices={};S.impStat=null;R()}">🗑 全データクリア</button>`:''}
+    </div>
+    ${statH}
+  </div>`;
+}
+
+/* ─── トレードテーブル（1日×3スロット） ─── */
+function rTable(days){
+  const filtered=hasAnyPrice()?days.filter(d=>S.prices[ds(d)]):days;
+  const revDstrs=C.revDstrs;
+  const rows=[];
+
+  filtered.forEach((d,di)=>{
+    const dstr=ds(d);
+    const rev=revDstrs.has(dstr);
+    const closePrice=S.prices[dstr]||null;
+    const prevDstr=di>0?ds(filtered[di-1]):null;
+    const prevClose=prevDstr?(S.prices[prevDstr]||null):null;
+    const prevRev=prevDstr?revDstrs.has(prevDstr):false;
+
+    // この日にいずれかのスロットで自動決済があるか
+    const hasAuto=[0,1,2].some(sl=>(S.settles[`${dstr}_${sl}`]||[]).some(s=>s.auto));
+    // 日合計利益（slot2行に表示）
+    const dayPr=rev?dayProfit(dstr):null;
+    let dayPrH='';
+    if(dayPr!==null){
+      const cl=dayPr>0?'ppos':dayPr<0?'pneg':'';
+      dayPrH=`<span class="${cl}">${dayPr>0?'+':''}${fn(Math.round(dayPr))}</span>`;
+    }
+
+    for(let slot=0;slot<3;slot++){
+      const slotKey=`${dstr}_${slot}`;
+      const price=getSlotPrice(dstr,slot);
+      const isLast=slot===2;
+
+      const ord=S.orders[slotKey]||{};
+      const bo=ord.buyId!=null;
+      const so=ord.sellId!=null;
+      const ryodate=bo&&so;
+      const boSettled=bo&&(entryById(ord.buyId)?.settled===true);
+      const soSettled=so&&(entryById(ord.sellId)?.settled===true);
+
+      // ─ スロット別 前日差 ─
+      // ①(slot0): 今日の始値 - 前日の終値（寄り付きギャップ）
+      // ②(slot1): 今日の中値 - 今日の始値（前半の動き）
+      // ③(slot2): 今日の終値 - 今日の中値（後半の動き）
+      let dfH='';
+      if(rev){
+        let dfVal=null;
+        if(slot===0){
+          // ① 今日始値 - 前日終値
+          const todayOpen=getSlotPrice(dstr,0);
+          const prevClose=prevDstr?getSlotPrice(prevDstr,2):null;
+          if(todayOpen&&prevClose&&prevRev) dfVal=todayOpen-prevClose;
+        } else if(slot===1){
+          // ② 今日中値 - 今日始値
+          const todayMid=getSlotPrice(dstr,1);
+          const todayOpen=getSlotPrice(dstr,0);
+          if(todayMid&&todayOpen) dfVal=todayMid-todayOpen;
+        } else {
+          // ③ 今日終値 - 今日中値
+          const todayClose=getSlotPrice(dstr,2);
+          const todayMid=getSlotPrice(dstr,1);
+          if(todayClose&&todayMid) dfVal=todayClose-todayMid;
+        }
+        if(dfVal!==null){
+          const cl=dfVal>0?'up':dfVal<0?'dn':'';
+          dfH=`<span class="${cl}">${dfVal>0?'+':''}${fn(Math.round(dfVal))}</span>`;
+        }
+      }
+
+      // ─ 価格表示 ─
+      // 始値データがある場合: ①②③ともに自動表示（非入力）
+      // 始値データがない場合: ①② は手動入力フィールド
+      let priceH='';
+      if(rev){
+        if(slot===2){
+          // ③終値：常に固定表示
+          priceH=`<span style="font-weight:700">${closePrice?fn(closePrice):'—'}</span>`;
+        } else if(S.openPrices[dstr]){
+          // 始値データあり → 自動計算値を表示（非入力）
+          const autoP=price;
+          const labelColor=slot===0?'var(--blue)':'var(--purple)';
+          priceH=`<span style="font-weight:700;color:${labelColor}">${autoP?fn(autoP):'—'}</span>`;
+        } else {
+          // 始値データなし → 手動入力（空欄=終値と同価格）
+          const storedV=S.slotPrices[slotKey];
+          priceH=`<input type="number" class="slot-p-inp"
+            value="${storedV>0?storedV:''}"
+            placeholder="${closePrice||'価格'}"
+            title="${slot===0?'始値を手入力（空欄=終値）':'中値を手入力（空欄=終値）'}"
+            oninput="S.slotPrices['${slotKey}']=parseFloat(this.value)||null">`;
+        }
+      } else {
+        priceH=`<span class="ph">${closePrice?fn(closePrice):'——'}</span>`;
+      }
+
+      // 日区切り下線（slot2最終行）
+      const endBorder=isLast?'border-bottom:2px solid #90A4AE!important':'';
+
+      let row=`<tr class="${ryodate?'row-ryodate':''}">`;
+
+      // 日付セル（slot0のみ、rowspan=3）
+      if(slot===0){
+        row+=`<td class="cd" rowspan="3" style="vertical-align:middle;font-weight:700">
+          ${fd(dstr)}
+          ${hasAuto?`<span class="expiry-warn">⚠自動</span>`:''}
+        </td>`;
+      }
+
+      row+=`
+        <td class="csl" style="color:var(--sub);font-size:10px;${endBorder}">${SLOT_LABELS[slot]}</td>
+        <td class="cp" style="${endBorder}">${priceH}</td>
+        <td class="cdf" style="${endBorder}">${dfH}</td>
+        <td class="cob" style="${endBorder}">
+          <button class="ord-btn ${bo?'ob':''}" onclick="toggleOrder('${slotKey}','buy')"
+            style="${boSettled?'text-decoration:line-through;opacity:.5':''}">${bo?'○':''}</button>
+          ${!bo?r3pctAlert(dstr,slot,'buy'):'<div style="font-size:8px;height:14px"></div>'}
+        </td>
+        <td class="cos" style="${endBorder}">
+          <button class="ord-btn ${so?'os':''}" onclick="toggleOrder('${slotKey}','sell')"
+            style="${soSettled?'text-decoration:line-through;opacity:.5':''}">${so?'×':''}</button>
+          ${!so?r3pctAlert(dstr,slot,'sell'):'<div style="font-size:8px;height:14px"></div>'}
+        </td>
+        <td class="cs" style="${endBorder}">${rSettleCell(slotKey,rev,price)}</td>
+        <td class="cpr" style="${endBorder}">${isLast?dayPrH:''}</td>
+      </tr>`;
+
+      rows.push(row);
+    }
+  });
+
+  const hiddenCount=hasAnyPrice()?days.length-filtered.length:0;
+  const hiddenNote=hiddenCount>0
+    ?`<div style="font-size:10px;color:var(--sub);padding:4px 10px;background:#FAFBFC;border-top:1px solid var(--border)">
+        ※ 終値データなし ${hiddenCount}日は非表示（祝日・データ欠損等）
+       </div>`:'';
+
+  return `<table class="trade">
+    <thead><tr>
+      <th class="cd">日付</th>
+      <th class="csl">回</th>
+      <th class="cp">価格</th>
+      <th class="cdf" title="①前日比 ②始→中 ③中→終">差</th>
+      <th class="cob">○買</th>
+      <th class="cos">×売</th>
+      <th class="cs">決済ポジション</th>
+      <th class="cpr">利益幅(円)</th>
+    </tr></thead>
+    <tbody>${rows.join('')}</tbody>
+  </table>${hiddenNote}`;
+}
+
+/* ─── 最高値・最安値 ─── */
+function rHighLow(days){
+  const revDstrs=new Set(days.slice(0,S.revealed).map(d=>ds(d)));
+  const mPrices=[];
+  revDstrs.forEach(dstr=>{if(S.prices[dstr])mPrices.push({dstr,price:S.prices[dstr]});});
+  if(!mPrices.length)return '';
+  mPrices.sort((a,b)=>b.price-a.price);
+  const mHi=mPrices[0],mLo=mPrices[mPrices.length-1];
+  let allHi=null,allLo=null;
+  try{
+    const revealedDstrs=new Set();revDstrs.forEach(d=>revealedDstrs.add(d));
+    lsSavedList().forEach(x=>{
+      if(x.y===S.year&&x.m===S.month)return;
+      const raw=localStorage.getItem(lsKey(x.y,x.m));if(!raw)return;
+      const md=JSON.parse(raw);const mDays=wds(x.y,x.m);const mRev=md.revealed||0;
+      mDays.slice(0,mRev).forEach(d=>{revealedDstrs.add(ds(d));});
+    });
+    const allPrices=[];
+    revealedDstrs.forEach(dstr=>{if(S.prices[dstr])allPrices.push({dstr,price:S.prices[dstr]});});
+    if(allPrices.length){
+      allPrices.sort((a,b)=>b.price-a.price);
+      allHi=allPrices[0];allLo=allPrices[allPrices.length-1];
+    }
+  }catch(e){}
+  const showAll=allHi&&allLo&&(allHi.price!==mHi.price||allLo.price!==mLo.price);
+  return `<div class="card">
+    <div style="display:flex;flex-wrap:wrap;align-items:stretch;gap:0">
+      <div style="padding:5px 14px;background:#FFF5F5;border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;gap:3px">
+        <div style="font-size:10px;font-weight:700;color:var(--sub)">📅 月間</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:10px;color:var(--red)">最高</span>
+          <span style="font-size:15px;font-weight:700;color:var(--red)">${fn(mHi.price)}円</span>
+          <span style="font-size:10px;color:var(--sub)">${fd(mHi.dstr)}</span>
+          <span style="font-size:10px;color:var(--sub);margin:0 4px">／</span>
+          <span style="font-size:10px;color:var(--blue)">最安</span>
+          <span style="font-size:15px;font-weight:700;color:var(--blue)">${fn(mLo.price)}円</span>
+          <span style="font-size:10px;color:var(--sub)">${fd(mLo.dstr)}</span>
+          ${mHi.price!==mLo.price?`<span style="font-size:10px;color:var(--sub);margin-left:6px">値幅 <b>${fn(mHi.price-mLo.price)}円</b></span>`:''}
+        </div>
+      </div>
+      ${showAll?`<div style="padding:5px 14px;background:#F5F9FF;display:flex;flex-direction:column;justify-content:center;gap:3px">
+        <div style="font-size:10px;font-weight:700;color:var(--sub)">📊 全期間</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:10px;color:var(--red)">最高</span>
+          <span style="font-size:15px;font-weight:700;color:var(--red)">${fn(allHi.price)}円</span>
+          <span style="font-size:10px;color:var(--sub)">${allHi.dstr}</span>
+          <span style="font-size:10px;color:var(--sub);margin:0 4px">／</span>
+          <span style="font-size:10px;color:var(--blue)">最安</span>
+          <span style="font-size:15px;font-weight:700;color:var(--blue)">${fn(allLo.price)}円</span>
+          <span style="font-size:10px;color:var(--sub)">${allLo.dstr}</span>
+          <span style="font-size:10px;color:var(--sub);margin-left:6px">値幅 <b>${fn(allHi.price-allLo.price)}円</b></span>
+        </div>
+      </div>`:''}
+    </div>
+  </div>`;
+}
+
+/* ─── ルール間隔判定 ─── */
+function calcThreshold(basePrice,pct){
+  const mag=Math.pow(10,Math.floor(Math.log10(basePrice)));
+  return Math.round(Math.floor(basePrice/mag)*mag*(pct/100));
+}
+function checkRulePct(dstr,slot,type){
+  if(!S.rule3On)return null;
+  const same=(C.open||openEgi()).filter(e=>e.type===type&&e.price);
+  if(!same.length)return null;
+  const curP=getSlotPrice(dstr,slot);
+  if(!curP)return null;
+  const pct=S.rule3Pct||3;
+  let ngBase=null,ngDiff=null,ngNeed=null;
+  for(const e of same){
+    const base=e.price,threshold=calcThreshold(base,pct),diff=Math.abs(curP-base);
+    if(diff<threshold&&(ngBase===null||diff<ngDiff)){ngBase=base;ngDiff=Math.round(diff);ngNeed=threshold;}
+  }
+  if(ngBase!==null)return{ok:false,base:ngBase,curP,diff:ngDiff,need:ngNeed};
+  const closest=same.reduce((a,b)=>Math.abs((b.price||0)-curP)<Math.abs((a.price||0)-curP)?b:a);
+  const base=closest.price,diff=Math.round(Math.abs(curP-base)),need=calcThreshold(base,pct);
+  return{ok:true,base,curP,diff,need};
+}
+function r3pctAlert(dstr,slot,type){
+  if(!(C.revDstrs||new Set()).has(dstr))return '';
+  const r=checkRulePct(dstr,slot,type);if(!r)return '';
+  if(r.ok)return `<div style="font-size:8px;color:#0057B8;font-weight:700;line-height:1.2">+${fn(r.diff)}円</div>`;
+  return `<div style="font-size:8px;color:#C62828;font-weight:700;line-height:1.2">-${fn(r.need-r.diff)}円</div>`;
+}
+
+/* ─── 決済セル ─── */
+function rSettleCell(slotKey,rev,curPrice){
+  const ss=S.settles[slotKey]||[];
+  const sh=C.sh;
+  const list=ss.map(s=>{
+    const e=entryById(s.posId);if(!e)return '';
+    const tCl=e.type==='buy'?'tb':'ts',tLb=e.type==='buy'?'○':'×';
+    const pr=e.price&&s.exitPrice?(e.type==='buy'?s.exitPrice-e.price:e.price-s.exitPrice)*sh:null;
+    const prStr=pr!==null?`<span class="${pr>=0?'ppos':'pneg'}" style="font-size:10px">${pr>=0?'+':''}${fn(Math.round(pr))}円</span>`:'';
+    return `<div class="si ${s.auto?'auto-si':''}">
+      ${s.auto?`<span class="auto-tag">⚠6ヶ月期限</span>`:''}
+      <span class="${tCl}">${tLb}</span>
+      <span>${fd(e.date)}</span>
+      <span style="color:var(--sub)">${e.price?fn(e.price):'-'}</span>→
+      <span style="font-weight:700">${fn(s.exitPrice)}</span>
+      ${prStr}
+      ${s.time?`<span class="time-badge">${s.time}</span>`:''}
+      <button class="brm" onclick="rmSettle('${slotKey}',${s.id})" title="削除">✕</button>
+    </div>`;
+  }).join('');
+  const open=C.open;
+  const canAdd=rev&&open.length>0&&S.sfDs!==slotKey;
+  const formOpen=S.sfDs===slotKey;
+  return `<div>
+    <div class="sl">${list}</div>
+    ${canAdd?`<button class="btn btn-blue btn-xs" style="margin-top:2px" onclick="openSF('${slotKey}')">＋ 決済追加</button>`:''}
+    ${formOpen?rSettleForm(slotKey,curPrice):''}
+  </div>`;
+}
+
+/* ─── 決済フォーム ─── */
+function rSettleForm(slotKey,curPrice){
+  const lastD=C.lastD;const open=C.open;const sh_sf=C.sh;
+  const {dstr,slot}=parseSlotKey(slotKey);
+  const sortedOpen=[...open].sort((a,b)=>(b.price||0)-(a.price||0));
+  const pItems=sortedOpen.map(e=>{
+    const tCl=e.type==='buy'?'tb':'ts',tLb=e.type==='buy'?'○':'×';
+    const isSel=S.selPos===e.id;
+    const isExpired=lastD&&isExp(e.date,lastD);
+    const expStr=isExpired
+      ?`<span style="color:var(--red);font-size:9px;font-weight:700">⚠期限超過</span>`
+      :`<span style="font-size:9px;color:var(--sub)">期限:${fd(addM6(e.date))}</span>`;
+    let plH='';
+    if(e.price&&curPrice){
+      const pl=Math.round((e.type==='buy'?curPrice-e.price:e.price-curPrice)*sh_sf);
+      const plCl=pl>0?'ppos':pl<0?'pneg':'';
+      plH=`<span class="${plCl}" style="font-size:10px;font-weight:700;min-width:58px;text-align:right">${pl>=0?'+':''}${fn(pl)}円</span>`;
+    }
+    return `<div class="pi2 ${isSel?'sel':''} ${isExpired?'expiring':''}" onclick="selPosF(${e.id})">
+      <span class="${tCl}">${tLb}</span>
+      <span>${fd(e.date)}</span>
+      <span>${e.price?fn(e.price)+'円':'—'}</span>
+      ${expStr}
+      <span style="font-size:9px;color:var(--muted)">${NUMS[e.gi]}</span>
+      ${e.time?`<span class="time-badge">${e.time}</span>`:''}
+      ${plH}
+    </div>`;
+  }).join('');
+
+  // クイック価格ボタン（現在値・スロット価格・選択ポジションの建値）
+  const qPrices=[];
+  if(curPrice) qPrices.push({label:`現在値 ${fn(curPrice)}`,val:curPrice,cls:''});
+  // スロット①②③の価格
+  for(let sl=0;sl<3;sl++){
+    const p=getSlotPrice(dstr,sl);
+    if(p&&!qPrices.some(q=>q.val===p))
+      qPrices.push({label:`${SLOT_LABELS[sl]} ${fn(p)}`,val:p,cls:sl===0?'qp-buy':sl===2?'':'qp-sell'});
+  }
+  // 選択ポジションの建値
+  if(S.selPos){
+    const se=entryById(S.selPos);
+    if(se&&se.price&&!qPrices.some(q=>q.val===se.price))
+      qPrices.push({label:`建値 ${fn(se.price)}`,val:se.price,cls:se.type==='buy'?'qp-buy':'qp-sell'});
+  }
+
+  const qBtns=qPrices.map(q=>`<button class="qp-btn ${q.cls}" onclick="S.exitInp='${q.val}';R()">${q.label}</button>`).join('');
+
+  return `<div class="sf">
+    <div style="font-weight:700;margin-bottom:4px">決済するポジションを選択</div>
+    <div class="pl">${pItems}</div>
+    <div style="margin-bottom:4px">
+      <div style="font-size:10px;color:var(--sub);margin-bottom:3px">クイック価格:</div>
+      <div class="qp-btns">${qBtns}</div>
+    </div>
+    <div class="row2">
+      <span>決済価格:</span>
+      <input type="number" value="${S.exitInp||curPrice||''}" placeholder="${curPrice||'価格入力'}"
+        oninput="S.exitInp=this.value">
+      <span style="font-size:10px;color:var(--sub)">円</span>
+    </div>
+    <div class="btns">
+      <button class="btn btn-blue btn-sm" onclick="confirmSettle()">確定</button>
+      <button class="btn btn-outline btn-sm" onclick="closeSF()">キャンセル</button>
+    </div>
+  </div>`;
+}
+
+/* ─── ポジションメモ（24グループ） ─── */
+function rMemo(){
+  const lastD=C.lastD;const sh=C.sh;
+  const autoStlIds=C.autoStlIds;
+
+  const gcards=S.groups.map((g,gi)=>{
+    const isCur=gi===S.gi;
+    const dispB=calcGroupDisp(gi,'buy').slice(0,5);
+    const dispS=calcGroupDisp(gi,'sell').slice(0,5);
+    const allDisp=[...dispB,...dispS];
+    const ownAll=[...S.groups[gi].buys,...S.groups[gi].sells];
+    const isDone=ownAll.length>0&&allDisp.every(e=>e.settled);
+
+    // 買い・売りを価格降順でマージ（最大5行）
+    const rows=[];
+    let bi=0,si=0;
+    while(rows.length<5&&(bi<dispB.length||si<dispS.length)){
+      const bp=bi<dispB.length?(dispB[bi].price||0):null;
+      const sp=si<dispS.length?(dispS[si].price||0):null;
+      if(bp!==null&&sp!==null&&bp===sp){rows.push({buy:dispB[bi++],sell:dispS[si++]});}
+      else if(bp!==null&&(sp===null||bp>sp)){rows.push({buy:dispB[bi++],sell:null});}
+      else{rows.push({buy:null,sell:dispS[si++]});}
+    }
+    while(rows.length<5)rows.push({buy:null,sell:null});
+
+    const mkCell=(e,colType)=>{
+      if(!e)return '<div class="ge"></div>';
+      const isExpired=lastD&&isExp(e.date,lastD);
+      const isAutoStl=e.settled&&autoStlIds.has(e.id);
+      const isOwnGi=e.settled&&C.settleGiMap&&C.settleGiMap.get(e.id)===gi;
+      let fukumiH='';
+      if(e.price){
+        let refP=null;
+        if(e.settled&&isOwnGi){refP=C.settleExitMap&&C.settleExitMap.get(e.id)||null;}
+        else if(!e.settled&&C.curP){refP=C.curP;}
+        if(refP){
+          const diff=colType==='buy'?refP-e.price:e.price-refP;
+          const val=Math.round(diff*sh);const cl=val>0?'ppos':val<0?'pneg':'';
+          fukumiH=`<div class="ge-fukumi ${cl}">(${val>0?'+':''}${fn(val)})</div>`;
+        }
+      }
+      return `<div class="ge has ${e.settled&&isOwnGi?'stl':''} ${isAutoStl&&isOwnGi?'auto-stl':''} ${colType}-e">
+        <div class="ged">${fd(e.date)}</div>
+        <div class="gep">${e.price?fn(e.price):'—'}</div>
+        ${fukumiH}
+        ${!e.settled&&isExpired?'<div class="ge-exp">⚠期限超過</div>':''}
+      </div>`;
+    };
+
+    const rowsH=rows.map(r=>`<div class="ge-row">
+      <div class="gcol">${mkCell(r.buy,'buy')}</div>
+      <div class="gcol">${mkCell(r.sell,'sell')}</div>
+    </div>`).join('');
+
+    return `<div class="gc ${isCur?'cur':''} ${isDone?'done':''}">
+      <div class="gh">
+        <span>${NUMS[gi]}</span>
+        <span style="display:flex;gap:3px;align-items:center">
+          ${isCur?'<span class="badge badge-orange">現在</span>':''}
+          ${isDone?'<span class="badge badge-green">済</span>':''}
+        </span>
+      </div>
+      <div class="gc-cols">
+        <div class="gch buy">○買い</div>
+        <div class="gch sell">×売り</div>
+      </div>
+      ${rowsH}
+      <div style="padding:2px 5px;border-top:1px solid var(--border)">
+        <input type="text" style="width:100%;font-size:10px;border:1px solid var(--border);border-radius:3px;padding:2px 4px;background:#FAFBFC"
+          placeholder="メモ..."
+          value="${(S.groupMemos[gi]||'').replace(/"/g,'&quot;')}"
+          oninput="S.groupMemos[${gi}]=this.value">
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="card">
+    <div class="memo-top">
+      <div class="memo-title">
+        📋 ポジションメモ欄（${N_GROUPS}グループ）
+        <button class="btn btn-outline btn-xs" style="margin-left:8px;font-size:10px;padding:2px 8px"
+          onclick="S.memoBelow=!S.memoBelow;R()"
+          title="${S.memoBelow?'トレード表の右横に戻す':'トレード表の下に移動する'}">
+          ${S.memoBelow?'⬆ 右横に戻す':'⬇ 下に移動'}
+        </button>
+      </div>
+      <div class="memo-meta">
+        <div class="ctrl"><label>元金</label>
+          <input type="number" style="width:82px" value="${S.capital}" placeholder="万円"
+            oninput="S.capital=this.value"> <span>万円</span>
+        </div>
+        <div class="ctrl"><label>1P株数</label>
+          <input type="number" style="width:72px" value="${S.shares}" placeholder="株"
+            oninput="S.shares=this.value"> <span>株</span>
+        </div>
+        <span style="font-size:12px;font-weight:700;color:var(--orange)">現在: ${NUMS[S.gi]}</span>
+        <span style="font-size:10px;color:var(--sub)">（右下ボタンで切替）</span>
+      </div>
+    </div>
+    <div class="g-grid" style="grid-template-columns:repeat(${S.memoBelow?4:3},1fr)">${gcards}</div>
+    <div style="padding:5px 14px;background:#FAFBFC;border-top:1px solid var(--border);font-size:10px;color:var(--sub);line-height:1.7">
+      <b>凡例：</b>
+      取り消し線＝決済済み /
+      <span style="background:var(--warn-lt);border-radius:2px;padding:0 3px">黄色</span>＝6ヶ月自動決済 /
+      <span style="color:var(--warn);font-weight:700">⚠期限</span>＝期限切れ /
+      括弧内＝含み損益（現在値基準）
+    </div>
+  </div>`;
+}
+
+/* ─── 相殺管理 ─── */
+function rSosai(){
+  const curP=C.curP;const sh=C.sh;
+
+  const open=[
+    ...calcGroupDisp(S.gi,'buy').filter(e=>!e.settled).map(e=>({...e,colType:'buy'})),
+    ...calcGroupDisp(S.gi,'sell').filter(e=>!e.settled).map(e=>({...e,colType:'sell'}))
+  ].sort((a,b)=>(b.price||0)-(a.price||0));
+  const n=Math.min(open.length,7);const pos=open.slice(0,n);
+  const LABS='ABCDEFGHIJ'.split('');
+
+  const buys=pos.filter(e=>e.colType==='buy');
+  const sells=pos.filter(e=>e.colType==='sell');
+  const fixedPairs=[];
+  buys.forEach(b=>sells.forEach(s=>{
+    const diff=(s.price||0)-(b.price||0);
+    fixedPairs.push({buy:b,sell:s,diff,type:diff>0?'rieki':diff<0?'son':'doji'});
+  }));
+  fixedPairs.sort((a,b)=>b.diff-a.diff);
+  const sonTotal=fixedPairs.filter(p=>p.type==='son').reduce((s,p)=>s+p.diff*sh,0);
+  const riekiTotal=fixedPairs.filter(p=>p.type==='rieki').reduce((s,p)=>s+p.diff*sh,0);
+
+  let settledProfit=0;
+  for(const ss of Object.values(S.settles)){
+    for(const s of ss){
+      const e=entryById(s.posId);if(!e||!e.price||!s.exitPrice)continue;
+      settledProfit+=(e.type==='buy'?s.exitPrice-e.price:e.price-s.exitPrice)*sh;
+    }
+  }
+
+  function rFixedSection(){
+    if(!fixedPairs.length)return '';
+    const rows=fixedPairs.map(p=>{
+      const typeLabel=p.type==='rieki'?'利益固定':p.type==='son'?'損失固定':'同値固定';
+      const amtCl=p.diff>0?'ppos':p.diff<0?'pneg':'';const amtVal=p.diff*sh;
+      let desc='';
+      if(p.type==='rieki')desc=`株価が${fn(p.buy.price)}〜${fn(p.sell.price)}の間に留まる限り+${fn(p.diff*sh)}円を確保。`;
+      else if(p.type==='son')desc=`損失-${fn(Math.abs(p.diff*sh))}円固定。別ポジションで相殺可能。`;
+      return `<div class="kf-row">
+        <span class="kf-badge kf-${p.type}">${typeLabel}</span>
+        <span class="tb">○${fn(p.buy.price)}</span><span style="color:var(--muted)">×</span><span class="ts">×${fn(p.sell.price)}</span>
+        <span class="kf-amount ${amtCl}">${p.diff>=0?'+':''}${fn(amtVal)}円</span>
+        <span class="kf-desc">${desc}</span>
+      </div>`;
+    }).join('');
+    const summary=`${riekiTotal>0?`<span class="kf-badge kf-rieki">利益固定計 +${fn(riekiTotal)}円</span>`:''}
+      ${sonTotal<0?`<span class="kf-badge kf-son">損失固定計 ${fn(sonTotal)}円</span>`:''}`;
+    return `<div class="kf-section">
+      <div class="kf-title" style="cursor:pointer;user-select:none" onclick="S.fixedOpen=!S.fixedOpen;R()">
+        🔒 固定判定 ${summary}
+        <span style="margin-left:auto;font-size:10px;background:#EEF2F6;padding:1px 8px;border-radius:4px;color:var(--sub)">${S.fixedOpen?'▲ 閉じる':'▼ 詳細表示'}</span>
+      </div>
+      ${S.fixedOpen?`<div>${rows}</div>`:''}
+    </div>`;
+  }
+
+  function rJisaSection(){
+    if(sonTotal>=0)return '';
+    const deficit=Math.abs(sonTotal),recovered=Math.max(0,settledProfit),remaining=Math.max(0,deficit-recovered);
+    const pct=Math.min(100,Math.round(recovered/deficit*100)),done=remaining<=0;
+    const statusBadge=done?'<span class="kf-badge kf-rieki">✓ 相殺完了</span>'
+      :`<span class="kf-badge kf-son">残り-${fn(Math.round(remaining))}円</span>`;
+    return `<div class="kf-section">
+      <div class="kf-title" style="cursor:pointer;user-select:none" onclick="S.jisaOpen=!S.jisaOpen;R()">
+        ⏱ 時間差相殺トラッカー ${statusBadge}
+        <span style="margin-left:auto;font-size:10px;background:#EEF2F6;padding:1px 8px;border-radius:4px;color:var(--sub)">${S.jisaOpen?'▲ 閉じる':'▼ 詳細表示'}</span>
+      </div>
+      ${S.jisaOpen?`<div>
+        <div style="font-size:11px;display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px">
+          <span>損失固定計: <b class="pneg">${fn(sonTotal)}円</b></span>
+          <span>決済累計利益: <b class="${settledProfit>=0?'ppos':'pneg'}">${settledProfit>=0?'+':''}${fn(Math.round(settledProfit))}円</b></span>
+          <span>残り必要利益: <b class="${remaining>0?'pneg':'ppos'}">${remaining>0?'-'+fn(Math.round(remaining)):'達成！'}</b></span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${pct}%;background:${done?'var(--green)':'var(--blue)'}"></div>
+        </div>
+        <div style="font-size:10px;color:var(--sub);margin-top:2px">${pct}% 回収済み</div>
+      </div>`:''}
+    </div>`;
+  }
+
+  function rComboSection(){
+    if(n<2)return '';
+    const combos=[];
+    for(let mask=0;mask<(1<<n);mask++){
+      const bits=[];for(let i=0;i<n;i++)if(mask&(1<<i))bits.push(i);
+      if(bits.length>=2)combos.push(bits);
+    }
+    function calcCombo(bits){
+      const ps=bits.map(i=>pos[i]);const label=bits.map(i=>LABS[i]).join('+');
+      const bs=ps.filter(e=>e.colType==='buy');const ss=ps.filter(e=>e.colType==='sell');
+      const buySum=bs.reduce((s,e)=>s+(e.price||0),0);const sellSum=ss.reduce((s,e)=>s+(e.price||0),0);
+      const netCount=bs.length-ss.length;
+      const posStr=ps.map(e=>`<span class="${e.colType==='buy'?'tb':'ts'}">${e.colType==='buy'?'○':'×'}${fn(e.price)}</span>`)
+        .join('<span style="color:var(--muted);margin:0 1px">+</span>');
+      let resH='',sortKey=0;
+      if(netCount===0){
+        const fixed=sellSum-buySum;const cl=fixed>=0?'ppos':'pneg';
+        resH=`<span class="sosai-res ${cl}">${fixed>=0?'+':''}${fn(fixed*sh)}円<span class="sosai-fix">(固定${fixed>=0?'益':'損'})</span></span>`;
+        sortKey=fixed;
+      } else if(netCount>0){
+        const be=Math.round((buySum-sellSum)/netCount),ok=curP&&curP>be;
+        const prof=ok?Math.round((curP-be)*netCount*sh):null;
+        resH=`<span class="sosai-res ${ok?'sosai-ok':'sosai-ng'}">${fn(be)}↑${ok?`<span class="sosai-achieved">✓達成 +${fn(prof)}円</span>`:''}</span>`;
+        sortKey=ok&&curP?Math.round((curP-be)*netCount*sh):-(be-(curP||0))*netCount*sh;
+      } else {
+        const be=Math.round((sellSum-buySum)/(-netCount)),ok=curP&&curP<be;
+        const prof=ok?Math.round((be-curP)*(-netCount)*sh):null;
+        resH=`<span class="sosai-res ${ok?'sosai-ok':'sosai-ng'}">${fn(be)}↓${ok?`<span class="sosai-achieved">✓達成 +${fn(prof)}円</span>`:''}</span>`;
+        sortKey=ok&&curP?Math.round((be-curP)*(-netCount)*sh):-(curP||0-be)*(-netCount)*sh;
+      }
+      return{label,posStr,resH,size:bits.length,sortKey};
+    }
+    const bySize={};
+    combos.forEach(bits=>{const r=calcCombo(bits);if(!bySize[r.size])bySize[r.size]=[];bySize[r.size].push(r);});
+    Object.values(bySize).forEach(rs=>rs.sort((a,b)=>b.sortKey-a.sortKey));
+    const sections=Object.entries(bySize).map(([sz,rs])=>`
+      <div class="sosai-group">
+        <div class="sosai-group-title" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none';this.querySelector('.sg-arrow').textContent=this.nextElementSibling.style.display===''?'▾':'▸'">
+          ${sz}点相殺 <span style="font-size:10px;color:var(--muted)">(${rs.length}件)</span>
+          <span class="sg-arrow">▾</span>
+        </div>
+        <div class="sosai-body">
+          ${rs.map(r=>`<div class="sosai-row">
+            <span class="sosai-lbl">${r.label}</span>
+            <span class="sosai-pos">${r.posStr}</span>
+            ${r.resH}
+          </div>`).join('')}
+        </div>
+      </div>`).join('');
+    const legend=pos.map((e,i)=>`<span style="margin-right:8px"><b>${LABS[i]}</b>:<span class="${e.colType==='buy'?'tb':'ts'}">${e.colType==='buy'?'○':'×'}</span>${fd(e.date)} ${fn(e.price)}円</span>`).join('');
+    return `<div class="kf-section" style="padding-bottom:0;border-bottom:none">
+      <div class="kf-title">🔀 相殺シミュレーション
+        <span style="font-size:10px;color:var(--sub);font-weight:400">${legend}</span>
+        ${curP?`<span style="margin-left:auto;font-size:11px">現在値: <b>${fn(curP)}円</b></span>`:''}
+      </div>
+      <div class="sosai-wrap" style="padding:0 0 8px 0">${sections}</div>
+    </div>`;
+  }
+
+  if(n<2&&!fixedPairs.length)return `<div class="card">
+    <div class="ch">⚖️ 相殺・固定管理
+      <span style="font-size:10px;color:var(--sub);font-weight:400">グループ ${NUMS[S.gi]} の未決済2件以上で表示</span>
+    </div>
+    <div class="cb" style="color:var(--sub);font-size:11px">未決済ポジションが2件以上になると表示されます</div>
+  </div>`;
+
+  return `<div class="card">
+    <div class="ch">⚖️ 相殺・固定管理
+      <span style="font-size:10px;color:var(--sub);font-weight:400">グループ ${NUMS[S.gi]}</span>
+    </div>
+    ${rFixedSection()}${rJisaSection()}${rComboSection()}
+  </div>`;
+}
+
+/* ─── ボトム ─── */
+function rBottom(){
+  const mp=monthProfit();const prev=Number(S.prevP)||0;const total=prev+Math.round(mp);
+  const mcl=mp>0?'ppos':mp<0?'pneg':'';const tcl=total>0?'ppos':total<0?'pneg':'';
+  return `<div class="card">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:0;border-bottom:1px solid var(--border)">
+      <div style="padding:8px 16px;border-right:1px solid var(--border);display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--sub);white-space:nowrap">📊 今月利益確定</span>
+        <span class="tbig ${mcl}" style="font-size:16px">${mp!==0?(mp>0?'+':'')+fn(Math.round(mp))+'円':'0円'}</span>
+      </div>
+      <div style="padding:8px 16px;border-right:1px solid var(--border);display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--sub);white-space:nowrap">先月までの累計</span>
+        <input type="number" style="width:110px;text-align:right" value="${S.prevP}" placeholder="0" oninput="S.prevP=this.value;R()">
+        <span style="font-size:12px">円</span>
+      </div>
+      <div style="padding:8px 16px;border-right:1px solid var(--border);display:flex;align-items:center;gap:6px">
+        <span class="op" style="font-size:16px">＋</span>
+        <span class="tbig ${mcl}">${fn(Math.round(mp))}円</span>
+        <span class="op" style="font-size:16px">＝</span>
+      </div>
+      <div style="padding:8px 16px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--sub)">累計</span>
+        <span class="tbig ${tcl}" style="font-size:20px">${fn(total)}円</span>
+      </div>
+    </div>
+    <div style="padding:8px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:700;color:var(--sub)">📝 メモ</span>
+      <textarea style="flex:1;min-width:200px;height:40px" oninput="S.memo=this.value">${S.memo}</textarea>
+    </div>
+  </div>`;
+}
+
+/* ════════════════ INIT ════════════════ */
+lsLoadMeta();
+lsLoadPrices();
+if(!lsLoadMonth(S.year,S.month)){resetMonthData();}
+R();
+</script>
+</body>
+</html>

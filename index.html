@@ -276,7 +276,8 @@ const S={
   groups:mkGroups(),
   carries:Array.from({length:N_GROUPS},()=>[]),
   gi:0,idc:1,prOpen:false,
-  sfDs:null,selPos:null,exitInp:'',
+  sfDs:null,selPosArr:[],exitInp:'',
+  revealedSlot:2,
   fixedOpen:false,jisaOpen:false,
   rule3On:true,rule3Pct:3,
   prevP:'',memo:'',fukumi:'',
@@ -349,10 +350,15 @@ function buildCache(){
   C.days=wds(S.year,S.month);
   C.lastD=S.revealed>0?ds(C.days[S.revealed-1]):null;
   C.sh=Math.max(Number(S.shares)||1,1);
-  // ライブ現在値が入力されていればそちらを優先
+  // ライブ現在値が入力されていればそちらを優先、次に現在公開中スロットの価格
   const livePNum=parseFloat(S.liveP)||null;
   C.liveP=livePNum;
-  C.curP=livePNum||(C.lastD?(S.prices[C.lastD]||null):null);
+  let slotBasedP=null;
+  if(C.lastD){
+    const rs=S.revealedSlot??2;
+    slotBasedP=getSlotPrice(C.lastD,rs)||null;
+  }
+  C.curP=livePNum||slotBasedP;
   C.revDstrs=new Set(C.days.slice(0,S.revealed).map(d=>ds(d)));
   C.entryMap=new Map();
   for(const g of S.groups){
@@ -477,20 +483,43 @@ function rmFromGroups(id){
 
 function openSF(slotKey){
   const {dstr,slot}=parseSlotKey(slotKey);
-  S.sfDs=slotKey;S.selPos=null;S.exitInp=String(getSlotPrice(dstr,slot)||'');R();
+  S.sfDs=slotKey;S.selPosArr=[];S.exitInp=String(getSlotPrice(dstr,slot)||'');R();
 }
-function closeSF(){S.sfDs=null;S.selPos=null;S.exitInp='';R()}
-function selPosF(id){S.selPos=id;R()}
+function closeSF(){S.sfDs=null;S.selPosArr=[];S.exitInp='';R()}
+function selPosF(id){
+  if(!S.selPosArr)S.selPosArr=[];
+  const idx=S.selPosArr.indexOf(id);
+  if(idx>=0)S.selPosArr.splice(idx,1);
+  else S.selPosArr.push(id);
+  R();
+}
 
 function confirmSettle(){
   const slotKey=S.sfDs;
-  if(!S.selPos){alert('ポジションを選択してください');return}
+  if(!S.selPosArr||!S.selPosArr.length){alert('ポジションを選択してください');return}
   const ep=parseFloat(S.exitInp);
   if(!ep||isNaN(ep)){alert('決済価格を入力してください');return}
   if(!S.settles[slotKey])S.settles[slotKey]=[];
-  S.settles[slotKey].push({id:S.idc++,posId:S.selPos,exitPrice:ep,auto:false,settledGi:S.gi,time:nowTime()});
-  const e=entryById(S.selPos);if(e)e.settled=true;
-  S.sfDs=null;S.selPos=null;S.exitInp='';R();
+  for(const posId of S.selPosArr){
+    S.settles[slotKey].push({id:S.idc++,posId,exitPrice:ep,auto:false,settledGi:S.gi,time:nowTime()});
+    const e=entryById(posId);if(e)e.settled=true;
+  }
+  S.sfDs=null;S.selPosArr=[];S.exitInp='';R();
+}
+
+function confirmSettleAll(){
+  const slotKey=S.sfDs;
+  const ep=parseFloat(S.exitInp);
+  if(!ep||isNaN(ep)){alert('決済価格を入力してください');return}
+  const open=C.open;
+  if(!open.length){alert('未決済ポジションがありません');return}
+  if(!S.settles[slotKey])S.settles[slotKey]=[];
+  for(const e of open){
+    if(e.settled)continue;
+    S.settles[slotKey].push({id:S.idc++,posId:e.id,exitPrice:ep,auto:false,settledGi:S.gi,time:nowTime()});
+    e.settled=true;
+  }
+  S.sfDs=null;S.selPosArr=[];S.exitInp='';R();
 }
 
 function rmSettle(slotKey,sid){
@@ -502,17 +531,22 @@ function rmSettle(slotKey,sid){
 
 function reveal(){
   const days=C.days||wds(S.year,S.month);
-  if(S.revealed<days.length){S.revealed++;checkAutoSettle(ds(days[S.revealed-1]));R();}
+  if(S.revealed===0){
+    S.revealed=1;S.revealedSlot=0;checkAutoSettle(ds(days[0]));R();return;
+  }
+  if((S.revealedSlot??2)<2){S.revealedSlot=(S.revealedSlot??0)+1;R();}
+  else if(S.revealed<days.length){S.revealed++;S.revealedSlot=0;checkAutoSettle(ds(days[S.revealed-1]));R();}
 }
 function revealAll(){
   const days=C.days||wds(S.year,S.month);
-  while(S.revealed<days.length){S.revealed++;checkAutoSettle(ds(days[S.revealed-1]));}R();
+  while(S.revealed<days.length){S.revealed++;checkAutoSettle(ds(days[S.revealed-1]));}
+  S.revealedSlot=2;R();
 }
 function advGrp(){if(S.gi<N_GROUPS-1){snapshotCarries(S.gi,S.gi+1);S.gi++;R()}}
 function prevGrp(){if(S.gi>0){S.gi--;R()}}
 
 function resetMonthData(){
-  S.revealed=0;S.orders={};S.settles={};S.groups=mkGroups();
+  S.revealed=0;S.revealedSlot=2;S.orders={};S.settles={};S.groups=mkGroups();
   S.carries=Array.from({length:N_GROUPS},()=>[]);
   S.groupMemos=Array.from({length:N_GROUPS},()=>'');
   S.slotPrices={};S.gi=0;S.idc=1;
@@ -635,7 +669,7 @@ function lsKey(y,m){return LS_PRE+y+'_'+String(m).padStart(2,'0');}
 
 function lsSave(){
   try{
-    const md={revealed:S.revealed,orders:S.orders,settles:S.settles,
+    const md={revealed:S.revealed,revealedSlot:S.revealedSlot??2,orders:S.orders,settles:S.settles,
       groups:S.groups,carries:S.carries,gi:S.gi,idc:S.idc,
       groupMemos:S.groupMemos,slotPrices:S.slotPrices};
     localStorage.setItem(lsKey(S.year,S.month),JSON.stringify(md));
@@ -653,7 +687,7 @@ function lsLoadMonth(y,m){
   try{
     const raw=localStorage.getItem(lsKey(y,m));if(!raw)return false;
     const d=JSON.parse(raw);
-    S.revealed=d.revealed||0;S.orders=d.orders||{};S.settles=d.settles||{};
+    S.revealed=d.revealed||0;S.revealedSlot=d.revealedSlot!==undefined?d.revealedSlot:2;S.orders=d.orders||{};S.settles=d.settles||{};
     S.groups=d.groups||mkGroups();
     S.carries=d.carries||Array.from({length:N_GROUPS},()=>[]);
     S.gi=d.gi||0;S.idc=d.idc||1;
@@ -723,7 +757,11 @@ function rSavedList(){
 let _saveTimer=null;
 function R(){
   buildCache();
+  const rightPanel=document.querySelector('.right-panel');
+  const savedScroll=rightPanel?rightPanel.scrollTop:0;
   document.getElementById('app').innerHTML=rApp();
+  const newRightPanel=document.querySelector('.right-panel');
+  if(newRightPanel&&savedScroll)newRightPanel.scrollTop=savedScroll;
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(lsSave,400);
 }
@@ -761,10 +799,8 @@ function rApp(){
     ${rBottom()}
     <div class="fixed-reveal">
       <span class="rev-info">公開 ${S.revealed}/${days.length}日${lastDs_?' 〜'+fd(lastDs_):''}</span>
-      <button class="btn btn-green" onclick="reveal()" ${S.revealed>=days.length?'disabled':''}>📅 翌日更新</button>
+      <button class="btn btn-green" onclick="reveal()" ${S.revealed>=days.length&&(S.revealedSlot??2)>=2?'disabled':''}>📅 翌日更新</button>
       <div style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.6);border-radius:7px;padding:5px 10px;backdrop-filter:blur(4px)">
-        <button class="btn btn-outline btn-sm" style="background:rgba(255,255,255,.9);padding:4px 10px" onclick="prevGrp()" ${S.gi<=0?'disabled':''}>◄前</button>
-        <span style="font-size:14px;font-weight:900;color:#fff;min-width:30px;text-align:center">${NUMS[S.gi]}</span>
         <button class="btn btn-outline btn-sm" style="background:rgba(255,255,255,.9);padding:4px 10px" onclick="advGrp()" ${S.gi>=N_GROUPS-1?'disabled':''}>次►</button>
       </div>
     </div>`;
@@ -1137,7 +1173,10 @@ function rTable(days){
 
   filtered.forEach((d,di)=>{
     const dstr=ds(d);
-    const rev=revDstrs.has(dstr);
+    const isInRevSet=revDstrs.has(dstr);
+    const isCurrentDay=dstr===C.lastD;
+    const isPastDay=isInRevSet&&!isCurrentDay;
+    const dayFullyRev=isPastDay||(isCurrentDay&&(S.revealedSlot??2)>=2);
     const closePrice=S.prices[dstr]||null;
     const prevDstr=di>0?ds(filtered[di-1]):null;
     const prevClose=prevDstr?(S.prices[prevDstr]||null):null;
@@ -1146,15 +1185,19 @@ function rTable(days){
     // この日にいずれかのスロットで自動決済があるか
     const hasAuto=[0,1,2].some(sl=>(S.settles[`${dstr}_${sl}`]||[]).some(s=>s.auto));
     // 日合計利益（slot2行に表示）
-    const dayPr=rev?dayProfit(dstr):null;
+    const dayPr=dayFullyRev?dayProfit(dstr):null;
     let dayPrH='';
     if(dayPr!==null){
       const cl=dayPr>0?'ppos':dayPr<0?'pneg':'';
-      dayPrH=`<span class="${cl}">${dayPr>0?'+':''}${fn(Math.round(dayPr))}</span>`;
+      const sh_=C.sh;
+      const perShare=sh_>1?Math.round(dayPr/sh_):null;
+      dayPrH=`<span class="${cl}" style="font-size:11px;font-weight:700">${dayPr>0?'+':''}${fn(Math.round(dayPr))}円</span>`
+        +(perShare!==null?`<br><span style="font-size:9px;color:var(--sub)">(1株${perShare>0?'+':''}${fn(perShare)})</span>`:'');
     }
 
     for(let slot=0;slot<3;slot++){
       const slotKey=`${dstr}_${slot}`;
+      const revSlot=isPastDay||(isCurrentDay&&slot<=(S.revealedSlot??2));
       const price=getSlotPrice(dstr,slot);
       const isLast=slot===2;
 
@@ -1165,12 +1208,8 @@ function rTable(days){
       const boSettled=bo&&(entryById(ord.buyId)?.settled===true);
       const soSettled=so&&(entryById(ord.sellId)?.settled===true);
 
-      // ─ スロット別 前日差 ─
-      // ①(slot0): 今日の始値 - 前日の終値（寄り付きギャップ）
-      // ②(slot1): 今日の中値 - 今日の始値（前半の動き）
-      // ③(slot2): 今日の終値 - 今日の中値（後半の動き）
       let dfH='';
-      if(rev){
+      if(revSlot){
         let dfVal=null;
         if(slot===0){
           // ① 今日始値 - 前日終値
@@ -1195,10 +1234,8 @@ function rTable(days){
       }
 
       // ─ 価格表示 ─
-      // 始値データがある場合: ①②③ともに自動表示（非入力）
-      // 始値データがない場合: ①② は手動入力フィールド
       let priceH='';
-      if(rev){
+      if(revSlot){
         if(slot===2){
           // ③終値：常に固定表示
           priceH=`<span style="font-weight:700">${closePrice?fn(closePrice):'—'}</span>`;
@@ -1238,16 +1275,16 @@ function rTable(days){
         <td class="cp" style="${endBorder}">${priceH}</td>
         <td class="cdf" style="${endBorder}">${dfH}</td>
         <td class="cob" style="${endBorder}">
-          <button class="ord-btn ${bo?'ob':''}" onclick="toggleOrder('${slotKey}','buy')"
+          ${revSlot?`<button class="ord-btn ${bo?'ob':''}" onclick="toggleOrder('${slotKey}','buy')"
             style="${boSettled?'text-decoration:line-through;opacity:.5':''}">${bo?'○':''}</button>
-          ${!bo?r3pctAlert(dstr,slot,'buy'):'<div style="font-size:8px;height:14px"></div>'}
+          ${!bo?r3pctAlert(dstr,slot,'buy'):'<div style="font-size:8px;height:14px"></div>'}`:''}
         </td>
         <td class="cos" style="${endBorder}">
-          <button class="ord-btn ${so?'os':''}" onclick="toggleOrder('${slotKey}','sell')"
+          ${revSlot?`<button class="ord-btn ${so?'os':''}" onclick="toggleOrder('${slotKey}','sell')"
             style="${soSettled?'text-decoration:line-through;opacity:.5':''}">${so?'×':''}</button>
-          ${!so?r3pctAlert(dstr,slot,'sell'):'<div style="font-size:8px;height:14px"></div>'}
+          ${!so?r3pctAlert(dstr,slot,'sell'):'<div style="font-size:8px;height:14px"></div>'}`:''}
         </td>
-        <td class="cs" style="${endBorder}">${rSettleCell(slotKey,rev,price)}</td>
+        <td class="cs" style="${endBorder}">${rSettleCell(slotKey,revSlot,price)}</td>
         <td class="cpr" style="${endBorder}">${isLast?dayPrH:''}</td>
       </tr>`;
 
@@ -1378,7 +1415,6 @@ function rSettleCell(slotKey,rev,curPrice){
       <span style="color:var(--sub)">${e.price?fn(e.price):'-'}</span>→
       <span style="font-weight:700">${fn(s.exitPrice)}</span>
       ${prStr}
-      ${s.time?`<span class="time-badge">${s.time}</span>`:''}
       <button class="brm" onclick="rmSettle('${slotKey}',${s.id})" title="削除">✕</button>
     </div>`;
   }).join('');
@@ -1397,9 +1433,12 @@ function rSettleForm(slotKey,curPrice){
   const lastD=C.lastD;const open=C.open;const sh_sf=C.sh;
   const {dstr,slot}=parseSlotKey(slotKey);
   const sortedOpen=[...open].sort((a,b)=>(b.price||0)-(a.price||0));
+  const selArr=S.selPosArr||[];
+  const selCount=selArr.length;
+
   const pItems=sortedOpen.map(e=>{
     const tCl=e.type==='buy'?'tb':'ts',tLb=e.type==='buy'?'○':'×';
-    const isSel=S.selPos===e.id;
+    const isSel=selArr.includes(e.id);
     const isExpired=lastD&&isExp(e.date,lastD);
     const expStr=isExpired
       ?`<span style="color:var(--red);font-size:9px;font-weight:700">⚠期限超過</span>`
@@ -1410,7 +1449,8 @@ function rSettleForm(slotKey,curPrice){
       const plCl=pl>0?'ppos':pl<0?'pneg':'';
       plH=`<span class="${plCl}" style="font-size:10px;font-weight:700;min-width:58px;text-align:right">${pl>=0?'+':''}${fn(pl)}円</span>`;
     }
-    return `<div class="pi2 ${isSel?'sel':''} ${isExpired?'expiring':''}" onclick="selPosF(${e.id})">
+    return `<div class="pi2 ${isSel?'sel':''} ${isExpired?'expiring':''}" onclick="selPosF(${e.id})" style="${isSel?'outline:2px solid var(--blue);':''}">
+      <span style="font-size:11px;margin-right:2px">${isSel?'☑':'☐'}</span>
       <span class="${tCl}">${tLb}</span>
       <span>${fd(e.date)}</span>
       <span>${e.price?fn(e.price)+'円':'—'}</span>
@@ -1421,26 +1461,33 @@ function rSettleForm(slotKey,curPrice){
     </div>`;
   }).join('');
 
-  // クイック価格ボタン（現在値・スロット価格・選択ポジションの建値）
+  // クイック価格ボタン
   const qPrices=[];
   if(curPrice) qPrices.push({label:`現在値 ${fn(curPrice)}`,val:curPrice,cls:''});
-  // スロット①②③の価格
   for(let sl=0;sl<3;sl++){
     const p=getSlotPrice(dstr,sl);
     if(p&&!qPrices.some(q=>q.val===p))
       qPrices.push({label:`${SLOT_LABELS[sl]} ${fn(p)}`,val:p,cls:sl===0?'qp-buy':sl===2?'':'qp-sell'});
   }
-  // 選択ポジションの建値
-  if(S.selPos){
-    const se=entryById(S.selPos);
+  if(selCount===1){
+    const se=entryById(selArr[0]);
     if(se&&se.price&&!qPrices.some(q=>q.val===se.price))
       qPrices.push({label:`建値 ${fn(se.price)}`,val:se.price,cls:se.type==='buy'?'qp-buy':'qp-sell'});
   }
-
   const qBtns=qPrices.map(q=>`<button class="qp-btn ${q.cls}" onclick="S.exitInp='${q.val}';R()">${q.label}</button>`).join('');
 
+  const selLabel=selCount===0?'（未選択）':selCount===1?`${selCount}件選択中`:
+    `<span style="color:var(--blue);font-weight:700">${selCount}件選択中</span>`;
+
   return `<div class="sf">
-    <div style="font-weight:700;margin-bottom:4px">決済するポジションを選択</div>
+    <div style="font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px">
+      決済するポジションを選択
+      <span style="font-size:10px;font-weight:400">${selLabel}</span>
+      ${sortedOpen.length>1?`<button class="btn btn-outline btn-xs" style="font-size:10px"
+        onclick="S.selPosArr=${JSON.stringify(sortedOpen.map(e=>e.id))};R()">全選択</button>
+        <button class="btn btn-outline btn-xs" style="font-size:10px"
+        onclick="S.selPosArr=[];R()">解除</button>`:''}
+    </div>
     <div class="pl">${pItems}</div>
     <div style="margin-bottom:4px">
       <div style="font-size:10px;color:var(--sub);margin-bottom:3px">クイック価格:</div>
@@ -1453,7 +1500,10 @@ function rSettleForm(slotKey,curPrice){
       <span style="font-size:10px;color:var(--sub)">円</span>
     </div>
     <div class="btns">
-      <button class="btn btn-blue btn-sm" onclick="confirmSettle()">確定</button>
+      <button class="btn btn-blue btn-sm" onclick="confirmSettle()" ${selCount===0?'disabled':''}>
+        確定${selCount>1?`（${selCount}件）`:''}
+      </button>
+      <button class="btn btn-sm" style="background:var(--orange);color:#fff" onclick="confirmSettleAll()">全決済</button>
       <button class="btn btn-outline btn-sm" onclick="closeSF()">キャンセル</button>
     </div>
   </div>`;
@@ -1466,23 +1516,23 @@ function rMemo(){
 
   const gcards=S.groups.map((g,gi)=>{
     const isCur=gi===S.gi;
-    const dispB=calcGroupDisp(gi,'buy').slice(0,5);
-    const dispS=calcGroupDisp(gi,'sell').slice(0,5);
+    const dispB=calcGroupDisp(gi,'buy').slice(0,7);
+    const dispS=calcGroupDisp(gi,'sell').slice(0,7);
     const allDisp=[...dispB,...dispS];
     const ownAll=[...S.groups[gi].buys,...S.groups[gi].sells];
     const isDone=ownAll.length>0&&allDisp.every(e=>e.settled);
 
-    // 買い・売りを価格降順でマージ（最大5行）
+    // 買い・売りを価格降順でマージ（最大7行）
     const rows=[];
     let bi=0,si=0;
-    while(rows.length<5&&(bi<dispB.length||si<dispS.length)){
+    while(rows.length<7&&(bi<dispB.length||si<dispS.length)){
       const bp=bi<dispB.length?(dispB[bi].price||0):null;
       const sp=si<dispS.length?(dispS[si].price||0):null;
       if(bp!==null&&sp!==null&&bp===sp){rows.push({buy:dispB[bi++],sell:dispS[si++]});}
       else if(bp!==null&&(sp===null||bp>sp)){rows.push({buy:dispB[bi++],sell:null});}
       else{rows.push({buy:null,sell:dispS[si++]});}
     }
-    while(rows.length<5)rows.push({buy:null,sell:null});
+    while(rows.length<7)rows.push({buy:null,sell:null});
 
     const mkCell=(e,colType)=>{
       if(!e)return '<div class="ge"></div>';
@@ -1527,10 +1577,11 @@ function rMemo(){
       </div>
       ${rowsH}
       <div style="padding:2px 5px;border-top:1px solid var(--border)">
-        <input type="text" style="width:100%;font-size:10px;border:1px solid var(--border);border-radius:3px;padding:2px 4px;background:#FAFBFC"
+        <textarea style="width:100%;font-size:10px;border:1px solid var(--border);border-radius:3px;padding:2px 4px;background:#FAFBFC;resize:none;overflow:hidden;line-height:1.4;min-height:22px"
           placeholder="メモ..."
-          value="${(S.groupMemos[gi]||'').replace(/"/g,'&quot;')}"
-          oninput="S.groupMemos[${gi}]=this.value">
+          oninput="S.groupMemos[${gi}]=this.value;this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+          onfocus="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+        >${(S.groupMemos[gi]||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
       </div>
     </div>`;
   }).join('');

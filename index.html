@@ -270,7 +270,7 @@ const N_GROUPS=24;
  */
 const S={
   year:2025,month:1,stock:'',code:'',capital:'',shares:'',
-  prices:{},openPrices:{},revealed:0,
+  prices:{},openPrices:{},highPrices:{},lowPrices:{},revealed:0,
   orders:{},
   settles:{},
   groups:mkGroups(),
@@ -292,7 +292,10 @@ const S={
   maxDailyLoss:'',     // 今日の最大損失ライン（円・マイナスで入力）
   lossLockPct:3,       // 損切りライン（建値から何%）
   dashOpen:true,       // ライブダッシュ開閉
-  nextPOpen:true       // 次の指値パネル開閉
+  nextPOpen:true,      // 次の指値パネル開閉
+  atrMult:1.5,         // ATR倍率
+  atrBasePrice:'',     // 買いAの建値（損切りライン計算用）
+  atrOpen:false        // ATRパネル開閉
 };
 
 function mkGroups(){return Array.from({length:N_GROUPS},()=>({buys:[],sells:[]}))}
@@ -483,7 +486,8 @@ function rmFromGroups(id){
 
 function openSF(slotKey){
   const {dstr,slot}=parseSlotKey(slotKey);
-  S.sfDs=slotKey;S.selPosArr=[];S.exitInp=String(getSlotPrice(dstr,slot)||'');R();
+  S.sfDs=slotKey;S.selPosArr=[];
+  S.exitInp=String(C.curP||getSlotPrice(dstr,slot)||'');R();
 }
 function closeSF(){S.sfDs=null;S.selPosArr=[];S.exitInp='';R()}
 function selPosF(id){
@@ -596,21 +600,18 @@ function parseImportText(text){
     }
     if(!dstr||!nums.length){if(i<5)continue;errs.push(`行${i+1}: "${ln.substring(0,40)}" → 解析不可`);continue;}
 
-    let open=null,close=null;
+    let open=null,high=null,low=null,close=null;
     if(nums.length>=4){
       // OHLC形式: 始値,高値,安値,終値[,出来高...]
-      open=nums[0]; close=nums[3];
+      open=nums[0]; high=nums[1]; low=nums[2]; close=nums[3];
     } else if(nums.length===3){
-      // 始値,安値,終値 or 始値,高値,終値 など
       open=nums[0]; close=nums[2];
     } else if(nums.length===2){
-      // 始値,終値
       open=nums[0]; close=nums[1];
     } else {
-      // 終値のみ
       close=nums[0];
     }
-    results.push({date:dstr,open,close});
+    results.push({date:dstr,open,high,low,close});
   }
   return {results,errs};
 }
@@ -620,6 +621,8 @@ function applyImportData(results){
     if(r.date&&r.close>0){
       S.prices[r.date]=r.close;
       if(r.open&&r.open>0) S.openPrices[r.date]=r.open;
+      if(r.high&&r.high>0) S.highPrices[r.date]=r.high;
+      if(r.low&&r.low>0)   S.lowPrices[r.date]=r.low;
       cnt++;
     }
   }
@@ -674,7 +677,7 @@ function lsSave(){
       groupMemos:S.groupMemos,slotPrices:S.slotPrices};
     localStorage.setItem(lsKey(S.year,S.month),JSON.stringify(md));
     // prices と openPrices を1つのオブジェクトに格納
-    localStorage.setItem(LS_PRICES,JSON.stringify({prices:S.prices,openPrices:S.openPrices}));
+    localStorage.setItem(LS_PRICES,JSON.stringify({prices:S.prices,openPrices:S.openPrices,highPrices:S.highPrices,lowPrices:S.lowPrices}));
     localStorage.setItem(LS_META,JSON.stringify({
       stock:S.stock,code:S.code,capital:S.capital,shares:S.shares,
       prevP:S.prevP,memo:S.memo,fukumi:S.fukumi,
@@ -708,9 +711,13 @@ function lsLoadPrices(){
     if(d.prices){
       S.prices=d.prices||{};
       S.openPrices=d.openPrices||{};
+      S.highPrices=d.highPrices||{};
+      S.lowPrices=d.lowPrices||{};
     } else {
-      S.prices=d; // 旧形式互換
+      S.prices=d;
       S.openPrices={};
+      S.highPrices={};
+      S.lowPrices={};
     }
   }catch(e){}
 }
@@ -1159,10 +1166,21 @@ function rPriceSetupBody(){
       <button class="btn btn-blue btn-sm" onclick="applyPasteText()">✅ 取り込む</button>
       <button class="btn btn-outline btn-sm" onclick="S.pasteText='';S.impStat=null;R()">クリア</button>
       ${closeCount?`<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red-md)"
-        onclick="if(confirm('全価格データをクリアしますか？')){S.prices={};S.openPrices={};S.impStat=null;R()}">🗑 全データクリア</button>`:''}
+        onclick="if(confirm('全価格データをクリアしますか？')){S.prices={};S.openPrices={};S.highPrices={};S.lowPrices={};S.impStat=null;R()}">🗑 全データクリア</button>`:''}
     </div>
     ${statH}
   </div>`;
+}
+
+/* ─── スロット別利益 ─── */
+function slotProfit(dstr,slot){
+  const ss=S.settles[`${dstr}_${slot}`]||[];
+  let t=0,any=false;
+  for(const s of ss){
+    const e=entryById(s.posId);if(!e||!e.price||!s.exitPrice)continue;
+    t+=(e.type==='buy'?s.exitPrice-e.price:e.price-s.exitPrice)*C.sh;any=true;
+  }
+  return any?t:null;
 }
 
 /* ─── トレードテーブル（1日×3スロット） ─── */
@@ -1184,7 +1202,7 @@ function rTable(days){
 
     // この日にいずれかのスロットで自動決済があるか
     const hasAuto=[0,1,2].some(sl=>(S.settles[`${dstr}_${sl}`]||[]).some(s=>s.auto));
-    // 日合計利益（slot2行に表示）
+    // 日合計利益（slot2行にサマリー）
     const dayPr=dayFullyRev?dayProfit(dstr):null;
     let dayPrH='';
     if(dayPr!==null){
@@ -1285,7 +1303,16 @@ function rTable(days){
           ${!so?r3pctAlert(dstr,slot,'sell'):'<div style="font-size:8px;height:14px"></div>'}`:''}
         </td>
         <td class="cs" style="${endBorder}">${rSettleCell(slotKey,revSlot,price)}</td>
-        <td class="cpr" style="${endBorder}">${isLast?dayPrH:''}</td>
+        <td class="cpr" style="${endBorder}">${(()=>{
+          const sp=slotProfit(dstr,slot);
+          if(sp!==null){
+            const cl=sp>0?'ppos':sp<0?'pneg':'';
+            return `<span class="${cl}" style="font-size:11px;font-weight:700">${sp>0?'+':''}${fn(Math.round(sp))}円</span>`;
+          }
+          // ③でかつ日合計がある場合（他スロットの決済分含む合計）はグレーで合計表示
+          if(isLast&&dayPr!==null){return dayPrH;}
+          return '';
+        })()}</td>
       </tr>`;
 
       rows.push(row);
@@ -1338,6 +1365,51 @@ function rHighLow(days){
     }
   }catch(e){}
   const showAll=allHi&&allLo&&(allHi.price!==mHi.price||allLo.price!==mLo.price);
+
+  // ATR計算
+  const atr=calcATR(14);
+  const hasHL=Object.keys(S.highPrices).length>0;
+  const mult=S.atrMult||1.5;
+  const slide=atr?Math.round(atr*mult):null;
+  const stopLoss=slide?Math.round(slide/2):null;
+  const baseP=parseFloat(S.atrBasePrice)||null;
+  const multOptions=[1.0,1.5,2.0];
+
+  // 自動おすすめ倍率（ATR÷現在値の割合で判断）
+  let recMult=null;
+  if(atr&&C.curP){
+    const atrPct=atr/C.curP*100;
+    if(atrPct<1.0) recMult=2.0;
+    else if(atrPct<2.0) recMult=1.5;
+    else recMult=1.0;
+  }
+
+  const atrSection=`<div style="padding:5px 14px;background:#FFF8E1;border-left:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:220px">
+    <div style="font-size:10px;font-weight:700;color:var(--warn)">📐 ATR14${hasHL?'':' ※近似'} &nbsp;
+      ${atr?`<span style="font-size:14px;font-weight:900;color:var(--orange)">${fn(atr)}円</span>`:'<span style="font-size:10px;color:var(--sub)">データ不足</span>'}
+    </div>
+    ${atr?`
+    <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+      ${multOptions.map(m=>{
+        const sw=Math.round(atr*m);
+        const isSel=mult===m;
+        const isRec=recMult===m;
+        return `<button style="font-size:10px;padding:1px 7px;border-radius:4px;border:1.5px solid ${isSel?'var(--orange)':'var(--border)'};background:${isSel?'var(--orange)':'#fff'};color:${isSel?'#fff':'var(--sub)'};cursor:pointer;font-weight:700;position:relative"
+          onclick="S.atrMult=${m};R()">${m}倍 <b>${fn(sw)}</b>円${isRec?'<span style="position:absolute;top:-8px;right:-4px;font-size:8px;background:var(--green);color:#fff;border-radius:3px;padding:0 3px;font-weight:700">推奨</span>':''}</button>`;
+      }).join('')}
+    </div>
+    <div style="font-size:10px;color:var(--sub);display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <span>損切り幅 <b style="color:var(--red)">${fn(stopLoss)}円</b></span>
+      <span style="color:var(--muted)">｜</span>
+      <span>建値
+        <input type="number" style="width:68px;font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:3px;margin:0 2px"
+          value="${S.atrBasePrice||''}" placeholder="例:1770"
+          oninput="S.atrBasePrice=this.value;R()">円
+        ${baseP?`<b style="color:var(--red)"> → ${fn(Math.round(baseP-stopLoss))}円で全決済</b>`:''}
+      </span>
+    </div>`:''}
+  </div>`;
+
   return `<div class="card">
     <div style="display:flex;flex-wrap:wrap;align-items:stretch;gap:0">
       <div style="padding:5px 14px;background:#FFF5F5;border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;gap:3px">
@@ -1353,7 +1425,7 @@ function rHighLow(days){
           ${mHi.price!==mLo.price?`<span style="font-size:10px;color:var(--sub);margin-left:6px">値幅 <b>${fn(mHi.price-mLo.price)}円</b></span>`:''}
         </div>
       </div>
-      ${showAll?`<div style="padding:5px 14px;background:#F5F9FF;display:flex;flex-direction:column;justify-content:center;gap:3px">
+      ${showAll?`<div style="padding:5px 14px;background:#F5F9FF;border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;gap:3px">
         <div style="font-size:10px;font-weight:700;color:var(--sub)">📊 全期間</div>
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:10px;color:var(--red)">最高</span>
@@ -1366,6 +1438,7 @@ function rHighLow(days){
           <span style="font-size:10px;color:var(--sub);margin-left:6px">値幅 <b>${fn(allHi.price-allLo.price)}円</b></span>
         </div>
       </div>`:''}
+      ${atrSection}
     </div>
   </div>`;
 }
@@ -1775,7 +1848,115 @@ function rSosai(){
   </div>`;
 }
 
-/* ─── ボトム ─── */
+/* ─── ATR計算 ─── */
+function calcATR(period=14){
+  // 全ての公開済み日付を古い順に取得
+  const revDstrs=[...C.revDstrs].sort();
+  if(revDstrs.length<2)return null;
+  const trs=[];
+  for(let i=1;i<revDstrs.length;i++){
+    const d=revDstrs[i];
+    const prev=revDstrs[i-1];
+    const h=S.highPrices[d]||S.prices[d];
+    const l=S.lowPrices[d]||S.prices[d];
+    const c=S.prices[d];
+    const pc=S.prices[prev];
+    if(!h||!l||!c||!pc)continue;
+    const tr=Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc));
+    trs.push(tr);
+  }
+  if(!trs.length)return null;
+  const recent=trs.slice(-period);
+  return Math.round(recent.reduce((s,v)=>s+v,0)/recent.length);
+}
+
+function rATRPanel(){
+  const atr=calcATR(14);
+  const hasHL=Object.keys(S.highPrices).length>0;
+  const mult=S.atrMult||1.5;
+  const baseP=parseFloat(S.atrBasePrice)||null;
+
+  const panelStyle='background:#FFF8E1;border:1.5px solid #FFD740;border-radius:8px;margin-bottom:10px;overflow:hidden';
+  const hStyle='padding:8px 14px;font-weight:700;font-size:12.5px;background:#FFF3CD;border-bottom:1px solid #FFD740;display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer';
+
+  if(!S.atrOpen){
+    return `<div style="${panelStyle}">
+      <div style="${hStyle}" onclick="S.atrOpen=true;R()">
+        📐 スライド戦略 ATRパネル
+        <span style="font-size:10px;color:var(--sub);font-weight:400;margin-left:auto">▼ 開く</span>
+      </div>
+    </div>`;
+  }
+
+  const multOptions=[1.0,1.5,2.0];
+
+  let atrH='';
+  if(!atr){
+    atrH=`<div style="color:var(--sub);font-size:11px;padding:8px 0">
+      ${!hasHL
+        ? '⚠️ 高値・安値データがありません。OHLCデータを貼り付けると正確なATRが計算されます。'
+        : '⚠️ 公開済みデータが少なすぎます（2日以上必要）。'}
+    </div>`;
+  } else {
+    const slide=Math.round(atr*mult);
+    const stopLoss=Math.round(slide/2);
+    atrH=`
+      <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:10px;align-items:flex-end">
+        <div>
+          <div style="font-size:10px;color:var(--sub);margin-bottom:2px">現在のボラティリティ（ATR14）${hasHL?'':'※近似値'}</div>
+          <div style="font-size:20px;font-weight:900;color:var(--orange)">${fn(atr)}円</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--sub);margin-bottom:4px">ATR倍率を選ぶ</div>
+          <div style="display:flex;gap:6px">
+            ${multOptions.map(m=>`<button class="btn btn-sm" style="padding:3px 12px;background:${mult===m?'var(--orange)':'#fff'};color:${mult===m?'#fff':'var(--sub)'};border:1.5px solid ${mult===m?'var(--orange)':'var(--border)'}"
+              onclick="S.atrMult=${m};R()">${m}倍</button>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+        ${multOptions.map(m=>{
+          const sw=Math.round(atr*m);
+          const sl=Math.round(sw/2);
+          const isSel=mult===m;
+          return `<div style="background:${isSel?'#FFF3CD':'#FAFBFC'};border:${isSel?'2px solid var(--orange)':'1px solid var(--border)'};border-radius:6px;padding:8px;text-align:center">
+            <div style="font-size:10px;color:var(--sub);margin-bottom:2px">${m}倍</div>
+            <div style="font-size:15px;font-weight:900;color:var(--orange)">スライド ${fn(sw)}円</div>
+            <div style="font-size:11px;color:var(--red);margin-top:2px">損切り幅 ${fn(sl)}円</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="background:#FFF0F0;border:1.5px solid var(--red-md);border-radius:6px;padding:8px 12px;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px">🛑 損切りラインを計算</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--sub)">買いAの建値：</span>
+          <input type="number" style="width:90px;font-size:12px;padding:3px 7px;border:1.5px solid var(--border);border-radius:5px"
+            value="${S.atrBasePrice||''}" placeholder="例:1770"
+            oninput="S.atrBasePrice=this.value;R()">
+          <span style="font-size:11px;color:var(--sub)">円</span>
+          ${baseP?`
+            <span style="font-size:13px;font-weight:700;color:var(--red)">
+              → ${fn(Math.round(baseP-stopLoss))}円で全決済リセット
+              <span style="font-size:10px;font-weight:400;color:var(--sub)">（建値 − ${fn(stopLoss)}円）</span>
+            </span>`
+          :''}
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--sub);background:#F5F7FA;border-radius:5px;padding:6px 10px">
+        💡 このボラなら <b style="color:var(--orange)">${fn(slide)}円</b> 動いたらスライドの目安（ATR×${mult}倍）
+      </div>`;
+  }
+
+  return `<div style="${panelStyle}">
+    <div style="${hStyle}" onclick="S.atrOpen=!S.atrOpen;R()">
+      📐 スライド戦略 ATRパネル
+      <span style="font-size:10px;color:var(--sub);font-weight:400;margin-left:auto">▲ 閉じる</span>
+    </div>
+    <div style="padding:12px 14px">${atrH}</div>
+  </div>`;
+}
+
+
 function rBottom(){
   const mp=monthProfit();const prev=Number(S.prevP)||0;const total=prev+Math.round(mp);
   const mcl=mp>0?'ppos':mp<0?'pneg':'';const tcl=total>0?'ppos':total<0?'pneg':'';

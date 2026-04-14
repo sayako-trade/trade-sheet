@@ -1309,8 +1309,6 @@ function rTable(days){
             const cl=sp>0?'ppos':sp<0?'pneg':'';
             return `<span class="${cl}" style="font-size:11px;font-weight:700">${sp>0?'+':''}${fn(Math.round(sp))}円</span>`;
           }
-          // ③でかつ日合計がある場合（他スロットの決済分含む合計）はグレーで合計表示
-          if(isLast&&dayPr!==null){return dayPrH;}
           return '';
         })()}</td>
       </tr>`;
